@@ -1,0 +1,1110 @@
+<!DOCTYPE html>
+<html lang="pl" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="OKX Pro AI" />
+  <meta name="theme-color" content="#0B0E14" />
+  <title>OKX Intraday Pro AI — Zdalny Panel 24/7</title>
+
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Google Fonts: Inter & JetBrains Mono -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;600;700&display=swap" rel="stylesheet" />
+
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', '-apple-system', 'BlinkMacSystemFont', 'sans-serif'],
+            mono: ['JetBrains Mono', 'monospace'],
+          },
+          colors: {
+            bgMain: '#0B0E14',
+            bgCard: '#151A23',
+            bgElevated: '#1C2330',
+            borderSubtle: '#263042',
+          }
+        }
+      }
+    };
+  </script>
+
+  <style>
+    :root {
+      --sat: env(safe-area-inset-top, 0px);
+      --sab: env(safe-area-inset-bottom, 0px);
+    }
+    html, body {
+      background-color: #0B0E14;
+      color: #F3F4F6;
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      overscroll-behavior-y: none;
+      -webkit-tap-highlight-color: transparent;
+      overflow-x: hidden;
+      width: 100%;
+    }
+    .safe-top {
+      padding-top: calc(var(--sat) + 10px);
+    }
+    .safe-bottom {
+      padding-bottom: calc(var(--sab) + 10px);
+    }
+    .main-scroll-area {
+      padding-bottom: calc(var(--sab) + 96px);
+    }
+    /* Custom sleek range slider for iOS touch */
+    input[type="range"] {
+      -webkit-appearance: none;
+      appearance: none;
+      background: #263042;
+      height: 8px;
+      border-radius: 999px;
+      outline: none;
+    }
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      background: #3B82F6;
+      border: 3px solid #0B0E14;
+      cursor: pointer;
+      box-shadow: 0 0 10px rgba(59, 130, 246, 0.5);
+    }
+    .tab-btn {
+      min-height: 48px;
+    }
+    .touch-btn {
+      min-height: 44px;
+    }
+    @keyframes pulse-dot {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.45; transform: scale(0.85); }
+    }
+    .animate-pulse-dot {
+      animation: pulse-dot 2s infinite ease-in-out;
+    }
+  </style>
+</head>
+<body class="bg-bgMain text-gray-100 antialiased selection:bg-blue-500/30">
+
+  <!-- ==================== STICKY TOP HEADER ==================== -->
+  <header class="sticky top-0 z-40 bg-bgMain/95 backdrop-blur-md border-b border-borderSubtle safe-top px-4 pb-3">
+    <div class="max-w-lg mx-auto">
+      <div class="flex items-center justify-between gap-2">
+        <!-- Brand & Cloud Status -->
+        <div class="flex flex-col min-w-0">
+          <div class="flex items-center gap-2">
+            <h1 class="text-base font-extrabold tracking-tight text-white truncate">OKX Intraday Pro AI</h1>
+            <span id="connBadge" class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-bold bg-amber-500/15 text-amber-400 border border-amber-500/30 shrink-0">
+              <span id="connDot" class="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse-dot"></span>
+              <span id="connText">BRAK POŁĄCZENIA</span>
+            </span>
+          </div>
+          <div class="flex items-center gap-2 mt-1 text-[11px] text-gray-400 truncate">
+            <span id="modeBadge" class="font-mono font-semibold text-blue-400">TRYB: DEMO</span>
+            <span>•</span>
+            <span id="lastScanTime" class="truncate">Ostatni skan: brak danych</span>
+          </div>
+        </div>
+
+        <!-- Quick START / PAUZA Toggle -->
+        <button id="toggleRunBtn" onclick="toggleBotRunning()" class="touch-btn px-3.5 py-2 rounded-xl font-bold text-xs tracking-wide flex items-center gap-1.5 transition active:scale-95 bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 shrink-0">
+          <span id="runBtnIcon">▶</span>
+          <span id="runBtnLabel">AKTYWNY</span>
+        </button>
+      </div>
+
+      <!-- Last Scan Summary Bar -->
+      <div class="mt-2 bg-bgCard/90 border border-borderSubtle/80 rounded-lg px-2.5 py-1.5 flex items-center justify-between gap-2">
+        <p id="scanSummaryText" class="text-[11px] text-gray-300 font-mono truncate">Oczekiwanie na połączenie z Cloudflare Worker...</p>
+        <button onclick="forceRunNow()" id="headerScanBtn" title="Wymuś skan" class="text-[11px] font-semibold text-blue-400 hover:text-blue-300 shrink-0 px-1.5 py-0.5 rounded bg-blue-500/10 border border-blue-500/20 active:scale-95">
+          ↻ Skanuj
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- ==================== TOAST / NOTIFICATION BANNER ==================== -->
+  <div id="toastContainer" class="fixed top-28 left-4 right-4 z-50 max-w-lg mx-auto pointer-events-none flex flex-col gap-2"></div>
+
+  <!-- ==================== MAIN CONTENT AREA ==================== -->
+  <main class="max-w-lg mx-auto px-4 pt-4 main-scroll-area">
+
+    <!-- ==================== TAB 1: PULPIT (DASHBOARD) ==================== -->
+    <section id="tab-dashboard" class="space-y-4">
+      
+      <!-- KPI Cards Grid (2x2) -->
+      <div class="grid grid-cols-2 gap-3">
+        <!-- Net Balance -->
+        <div class="bg-bgCard border border-borderSubtle rounded-2xl p-3.5 shadow-sm">
+          <div class="text-[11px] font-medium text-gray-400 uppercase tracking-wider">Dostępne Saldo</div>
+          <div id="kpiBalance" class="text-xl font-extrabold font-mono text-white mt-1">1000.00 <span class="text-xs font-semibold text-gray-400">USDT</span></div>
+          <div id="kpiEquity" class="text-[11px] text-gray-400 mt-1 font-mono">Kapitał całk.: 1000.00</div>
+        </div>
+
+        <!-- Unrealized PnL -->
+        <div class="bg-bgCard border border-borderSubtle rounded-2xl p-3.5 shadow-sm">
+          <div class="text-[11px] font-medium text-gray-400 uppercase tracking-wider">Otwarty PnL (Netto)</div>
+          <div id="kpiUnrealized" class="text-xl font-extrabold font-mono text-gray-300 mt-1">0.00 <span class="text-xs font-semibold">USDT</span></div>
+          <div id="kpiOpenCount" class="text-[11px] text-gray-400 mt-1">Pozycje: 0 / 5</div>
+        </div>
+
+        <!-- Realized Net PnL -->
+        <div class="bg-bgCard border border-borderSubtle rounded-2xl p-3.5 shadow-sm">
+          <div class="text-[11px] font-medium text-gray-400 uppercase tracking-wider">Zrealizowany Zysk</div>
+          <div id="kpiRealized" class="text-xl font-extrabold font-mono text-gray-300 mt-1">0.00 <span class="text-xs font-semibold">USDT</span></div>
+          <div id="kpiWinRate" class="text-[11px] text-gray-400 mt-1">Skuteczność: — (0 transakcji)</div>
+        </div>
+
+        <!-- Total OKX Fees -->
+        <div class="bg-bgCard border border-borderSubtle rounded-2xl p-3.5 shadow-sm">
+          <div class="text-[11px] font-medium text-gray-400 uppercase tracking-wider">Prowizje OKX Taker</div>
+          <div id="kpiFees" class="text-xl font-extrabold font-mono text-amber-400 mt-1">-0.00 <span class="text-xs font-semibold">USDT</span></div>
+          <div id="kpiFeeRate" class="text-[11px] text-gray-400 mt-1">Stawka: 0.05% / strona</div>
+        </div>
+      </div>
+
+      <!-- Action Bar -->
+      <div class="flex gap-2.5">
+        <button onclick="forceRunNow()" id="mainScanBtn" class="touch-btn flex-1 bg-blue-600 hover:bg-blue-500 active:scale-[0.98] text-white font-bold text-sm rounded-xl px-4 py-3 flex items-center justify-center gap-2 shadow-lg shadow-blue-600/20 transition">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+          <span>Wymuś skan teraz</span>
+        </button>
+        <button onclick="fetchCloudState(true)" class="touch-btn bg-bgCard hover:bg-bgElevated active:scale-[0.98] border border-borderSubtle text-gray-200 font-semibold text-sm rounded-xl px-4 py-3 flex items-center justify-center gap-1.5 transition">
+          <span>Odśwież</span>
+        </button>
+      </div>
+
+      <!-- Active Open Positions Section -->
+      <div>
+        <div class="flex items-center justify-between mb-2.5">
+          <h2 class="text-sm font-bold text-gray-200 uppercase tracking-wider">Aktywne Pozycje (<span id="openPosHeaderCount">0</span>)</h2>
+          <span class="text-[11px] text-gray-400">Interwały: 5m / 15m / 1H</span>
+        </div>
+
+        <div id="openPositionsList" class="space-y-3">
+          <!-- Rendered dynamically -->
+        </div>
+      </div>
+    </section>
+
+    <!-- ==================== TAB 2: HISTORIA I AI ==================== -->
+    <section id="tab-history" class="hidden space-y-5">
+      
+      <!-- AI Logs Feed -->
+      <div>
+        <div class="flex items-center justify-between mb-2">
+          <h2 class="text-sm font-bold text-blue-400 uppercase tracking-wider flex items-center gap-1.5">
+            <span>✦</span> Logi Decyzyjne & Gemini AI
+          </h2>
+          <span id="aiStatusPill" class="text-[11px] px-2 py-0.5 rounded-full bg-gray-800 text-gray-400 font-semibold">AI Wyłączone</span>
+        </div>
+        <div id="aiLogsContainer" class="bg-bgCard border border-borderSubtle rounded-2xl p-3 max-h-48 overflow-y-auto space-y-2">
+          <p class="text-xs text-gray-500 text-center py-3">Brak wpisów w dzienniku AI / systemu.</p>
+        </div>
+      </div>
+
+      <!-- Closed Trade History -->
+      <div>
+        <div class="flex items-center justify-between mb-2.5">
+          <h2 class="text-sm font-bold text-gray-200 uppercase tracking-wider">Historia Zamkniętych Pozycji</h2>
+          <span id="historyCountBadge" class="text-xs font-mono text-gray-400">0 pozycji</span>
+        </div>
+        <div id="historyList" class="space-y-2.5">
+          <!-- Rendered dynamically -->
+        </div>
+      </div>
+    </section>
+
+    <!-- ==================== TAB 3: STRATEGIA ==================== -->
+    <section id="tab-strategy" class="hidden space-y-4">
+      <div class="bg-bgCard border border-borderSubtle rounded-2xl p-4 space-y-4">
+        <div class="border-b border-borderSubtle pb-3">
+          <h2 class="text-base font-bold text-white">Tryb Pracy Silnika</h2>
+          <p class="text-xs text-gray-400 mt-0.5">Przełącz pomiędzy symulatorem KV a zleceniami na giełdzie OKX.</p>
+        </div>
+
+        <!-- Mode Selector -->
+        <div class="grid grid-cols-2 gap-2">
+          <button type="button" id="btnModeDemo" onclick="selectMode('DEMO')" class="touch-btn rounded-xl border font-bold text-xs py-2.5 px-3 transition text-center">
+            TRYB DEMO (KV)
+            <span class="block text-[10px] font-normal opacity-80 mt-0.5">Symulacja w chmurze</span>
+          </button>
+          <button type="button" id="btnModeOkx" onclick="selectMode('OKX_API')" class="touch-btn rounded-xl border font-bold text-xs py-2.5 px-3 transition text-center">
+            OKX API (FUTURES)
+            <span class="block text-[10px] font-normal opacity-80 mt-0.5">Wymaga kluczy w Secrets</span>
+          </button>
+        </div>
+
+        <!-- OKX Simulated Header Toggle -->
+        <div id="okxSimBox" class="flex items-center justify-between bg-bgElevated/80 border border-borderSubtle rounded-xl p-3">
+          <div class="pr-2">
+            <div class="text-xs font-bold text-gray-200">Nagłówek OKX Demo Trading</div>
+            <div class="text-[11px] text-gray-400">Wysyła <code class="text-blue-400">x-simulated-trading: 1</code> (konto testowe OKX)</div>
+          </div>
+          <label class="relative inline-flex items-center cursor-pointer shrink-0">
+            <input type="checkbox" id="cfgOkxSimHeader" class="sr-only peer" checked />
+            <div class="w-11 h-6 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+          </label>
+        </div>
+      </div>
+
+      <!-- Capital & Leverage Settings -->
+      <div class="bg-bgCard border border-borderSubtle rounded-2xl p-4 space-y-4">
+        <h2 class="text-base font-bold text-white border-b border-borderSubtle pb-2.5">Kapitał, Dźwignia i Kierunek</h2>
+
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-semibold text-gray-300 mb-1.5">Depozyt / pozycja (USDT)</label>
+            <input type="number" id="cfgMargin" min="5" max="10000" step="5" value="50" class="w-full touch-btn bg-bgElevated border border-borderSubtle rounded-xl px-3 text-sm font-mono font-bold text-white focus:border-blue-500 focus:outline-none" />
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-gray-300 mb-1.5">Max otwartych pozycji</label>
+            <input type="number" id="cfgMaxPos" min="1" max="10" step="1" value="5" class="w-full touch-btn bg-bgElevated border border-borderSubtle rounded-xl px-3 text-sm font-mono font-bold text-white focus:border-blue-500 focus:outline-none" />
+          </div>
+        </div>
+
+        <!-- Leverage Slider -->
+        <div>
+          <div class="flex justify-between items-center mb-1.5">
+            <label class="text-xs font-semibold text-gray-300">Dźwignia (Leverage)</label>
+            <span id="cfgLevDisplay" class="text-sm font-mono font-extrabold text-blue-400 bg-blue-500/15 px-2.5 py-0.5 rounded-lg">10x</span>
+          </div>
+          <input type="range" id="cfgLeverage" min="1" max="50" step="1" value="10" oninput="document.getElementById('cfgLevDisplay').textContent = this.value + 'x'" class="w-full" />
+          <div class="flex justify-between text-[10px] text-gray-500 font-mono mt-1">
+            <span>1x</span><span>10x</span><span>25x</span><span>50x</span>
+          </div>
+        </div>
+
+        <!-- Direction Mode -->
+        <div>
+          <label class="block text-xs font-semibold text-gray-300 mb-1.5">Dozwolony kierunek handlu</label>
+          <div class="grid grid-cols-3 gap-2">
+            <button type="button" id="dir-BOTH" onclick="selectDirection('BOTH')" class="touch-btn rounded-xl border text-xs font-bold py-2 transition">LONG & SHORT</button>
+            <button type="button" id="dir-LONG" onclick="selectDirection('LONG')" class="touch-btn rounded-xl border text-xs font-bold py-2 transition">TYLKO LONG</button>
+            <button type="button" id="dir-SHORT" onclick="selectDirection('SHORT')" class="touch-btn rounded-xl border text-xs font-bold py-2 transition">TYLKO SHORT</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Fibonacci, Risk & Trailing Stop -->
+      <div class="bg-bgCard border border-borderSubtle rounded-2xl p-4 space-y-4">
+        <h2 class="text-base font-bold text-white border-b border-borderSubtle pb-2.5">Filtry Fibo, R:R i Trailing Stop</h2>
+
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-semibold text-gray-300 mb-1.5">Min. Risk/Reward (R:R)</label>
+            <input type="number" id="cfgMinRR" min="1.0" max="5.0" step="0.1" value="1.6" class="w-full touch-btn bg-bgElevated border border-borderSubtle rounded-xl px-3 text-sm font-mono font-bold text-white focus:border-blue-500 focus:outline-none" />
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-gray-300 mb-1.5">Min. Jakość Setupu (0-100)</label>
+            <input type="number" id="cfgMinQuality" min="40" max="95" step="5" value="70" class="w-full touch-btn bg-bgElevated border border-borderSubtle rounded-xl px-3 text-sm font-mono font-bold text-white focus:border-blue-500 focus:outline-none" />
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-gray-300 mb-1.5">Aktywacja Trailing (%)</label>
+            <input type="number" id="cfgTrailAct" min="0.2" max="10" step="0.1" value="0.9" class="w-full touch-btn bg-bgElevated border border-borderSubtle rounded-xl px-3 text-sm font-mono font-bold text-white focus:border-blue-500 focus:outline-none" />
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-gray-300 mb-1.5">Odstęp Trailing (%)</label>
+            <input type="number" id="cfgTrailDist" min="0.1" max="5" step="0.05" value="0.35" class="w-full touch-btn bg-bgElevated border border-borderSubtle rounded-xl px-3 text-sm font-mono font-bold text-white focus:border-blue-500 focus:outline-none" />
+          </div>
+        </div>
+
+        <!-- BTC Trend Guard Toggle -->
+        <div class="flex items-center justify-between bg-bgElevated/80 border border-borderSubtle rounded-xl p-3">
+          <div class="pr-2">
+            <div class="text-xs font-bold text-gray-200">BTC Trend Guard</div>
+            <div class="text-[11px] text-gray-400">Blokuje LONG przy krachu BTC (&lt;-2.8%) i SHORT przy pompie (&gt;+3.2%)</div>
+          </div>
+          <label class="relative inline-flex items-center cursor-pointer shrink-0">
+            <input type="checkbox" id="cfgBtcGuard" class="sr-only peer" checked />
+            <div class="w-11 h-6 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-500"></div>
+          </label>
+        </div>
+
+        <!-- Gemini 3 AI Toggle -->
+        <div class="flex items-center justify-between bg-bgElevated/80 border border-borderSubtle rounded-xl p-3">
+          <div class="pr-2">
+            <div class="text-xs font-bold text-blue-300">✦ Gemini 3 AI Bramkarz & Menedżer</div>
+            <div class="text-[11px] text-gray-400">Weryfikuje wejścia i nadzoruje pozycje co 5 min (wymaga <code class="text-gray-300">GEMINI_API_KEY</code>)</div>
+          </div>
+          <label class="relative inline-flex items-center cursor-pointer shrink-0">
+            <input type="checkbox" id="cfgAiEnabled" class="sr-only peer" />
+            <div class="w-11 h-6 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+          </label>
+        </div>
+      </div>
+
+      <!-- Save & Reset Actions -->
+      <div class="space-y-3 pt-1">
+        <button onclick="saveStrategyToCloud()" id="saveSettingsBtn" class="touch-btn w-full bg-emerald-600 hover:bg-emerald-500 active:scale-[0.98] text-white font-bold text-sm rounded-xl py-3.5 px-4 shadow-lg shadow-emerald-600/20 transition">
+          Zapisz ustawienia w chmurze
+        </button>
+
+        <button onclick="requestDemoReset()" id="resetDemoBtn" class="touch-btn w-full bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/30 text-rose-400 font-semibold text-xs rounded-xl py-3 px-4 transition">
+          Resetuj konto DEMO (przywróć 1000 USDT i wyczyść historię)
+        </button>
+      </div>
+    </section>
+
+    <!-- ==================== TAB 4: CHMURA 24/7 (CLOUD CONNECTION) ==================== -->
+    <section id="tab-cloud" class="hidden space-y-4">
+      
+      <!-- Welcome / Setup Prompt Banner -->
+      <div id="cloudSetupPrompt" class="bg-blue-500/10 border border-blue-500/30 rounded-2xl p-4">
+        <div class="flex items-start gap-3">
+          <div class="w-8 h-8 rounded-xl bg-blue-500/20 text-blue-400 flex items-center justify-center font-bold shrink-0 mt-0.5">☁</div>
+          <div>
+            <h3 class="text-sm font-bold text-blue-300">Połącz iPhone'a z silnikiem Cloudflare 24/7</h3>
+            <p class="text-xs text-gray-300 mt-1 leading-relaxed">
+              Wklej poniżej adres URL swojego Workera (zakończony na <code class="text-blue-300">.workers.dev</code>) oraz hasło <code class="text-blue-300">DASHBOARD_PIN</code>, które zapisałeś w ustawieniach Cloudflare.
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Connection Form -->
+      <div class="bg-bgCard border border-borderSubtle rounded-2xl p-4 space-y-4">
+        <div>
+          <label class="block text-xs font-bold text-gray-300 mb-1.5">Adres URL Cloudflare Workera</label>
+          <input type="url" id="inputWorkerUrl" placeholder="https://okx-intraday-bot.twoja-nazwa.workers.dev" autocapitalize="none" autocorrect="off" spellcheck="false" class="w-full touch-btn bg-bgElevated border border-borderSubtle rounded-xl px-3.5 text-sm font-mono text-white placeholder-gray-500 focus:border-blue-500 focus:outline-none" />
+          <p class="text-[11px] text-gray-500 mt-1">Bez ukośnika „/” na końcu adresu.</p>
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold text-gray-300 mb-1.5">Twój DASHBOARD_PIN</label>
+          <input type="password" id="inputDashboardPin" placeholder="Wpisz hasło ustawione w Secrets" autocapitalize="none" autocorrect="off" class="w-full touch-btn bg-bgElevated border border-borderSubtle rounded-xl px-3.5 text-sm font-mono text-white placeholder-gray-500 focus:border-blue-500 focus:outline-none" />
+        </div>
+
+        <button onclick="connectAndSyncCloud()" id="connectCloudBtn" class="touch-btn w-full bg-blue-600 hover:bg-blue-500 active:scale-[0.98] text-white font-bold text-sm rounded-xl py-3.5 px-4 shadow-lg shadow-blue-600/20 transition">
+          Połącz i zsynchronizuj z chmurą
+        </button>
+
+        <!-- Diagnostic Box -->
+        <div id="cloudDiagnosticBox" class="hidden rounded-xl p-3 text-xs leading-relaxed border"></div>
+      </div>
+
+      <!-- iOS PWA Home Screen Tip -->
+      <div class="bg-bgCard border border-borderSubtle rounded-2xl p-4 space-y-2">
+        <h3 class="text-xs font-bold uppercase tracking-wider text-gray-300">Jak dodać jako aplikację na ekran iPhone'a?</h3>
+        <ol class="text-xs text-gray-400 space-y-1.5 list-decimal list-inside leading-relaxed">
+          <li>Otwórz tę stronę w przeglądarce <strong class="text-gray-200">Safari</strong>.</li>
+          <li>Stuknij ikonę <strong class="text-gray-200">Udostępnij</strong> (kwadrat ze strzałką w górę na dole ekranu).</li>
+          <li>Wybierz <strong class="text-gray-200">„Do ekranu początkowego” (Add to Home Screen)</strong>.</li>
+          <li>Od teraz uruchamiasz bota własną ikoną na pulpicie jak natywną aplikację giełdową.</li>
+        </ol>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- ==================== BOTTOM FIXED TAB BAR ==================== -->
+  <nav class="fixed bottom-0 left-0 right-0 z-40 bg-bgMain/95 backdrop-blur-lg border-t border-borderSubtle safe-bottom px-2 pt-1.5">
+    <div class="max-w-lg mx-auto grid grid-cols-4 gap-1">
+      <button onclick="switchTab('dashboard')" id="nav-dashboard" class="tab-btn flex flex-col items-center justify-center rounded-xl text-blue-400 transition">
+        <svg class="w-5 h-5 mb-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>
+        <span class="text-[11px] font-bold">Pulpit</span>
+      </button>
+
+      <button onclick="switchTab('history')" id="nav-history" class="tab-btn flex flex-col items-center justify-center rounded-xl text-gray-400 hover:text-gray-200 transition">
+        <svg class="w-5 h-5 mb-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"/></svg>
+        <span class="text-[11px] font-semibold">Historia i AI</span>
+      </button>
+
+      <button onclick="switchTab('strategy')" id="nav-strategy" class="tab-btn flex flex-col items-center justify-center rounded-xl text-gray-400 hover:text-gray-200 transition">
+        <svg class="w-5 h-5 mb-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4"/></svg>
+        <span class="text-[11px] font-semibold">Strategia</span>
+      </button>
+
+      <button onclick="switchTab('cloud')" id="nav-cloud" class="tab-btn flex flex-col items-center justify-center rounded-xl text-gray-400 hover:text-gray-200 transition relative">
+        <span id="cloudNavAlertDot" class="hidden absolute top-1.5 right-6 w-2 h-2 rounded-full bg-amber-400"></span>
+        <svg class="w-5 h-5 mb-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 15a4 4 0 004 4h9a5 5 0 10-.1-9.999 5.002 5.002 0 10-9.78 2.096A4.001 4.001 0 003 15z"/></svg>
+        <span class="text-[11px] font-semibold">Chmura 24/7</span>
+      </button>
+    </div>
+  </nav>
+
+  <!-- ==================== INLINE CONFIRMATION MODAL (NO alert/confirm) ==================== -->
+  <div id="confirmModal" class="hidden fixed inset-0 z-50 bg-black/75 backdrop-blur-sm flex items-end sm:items-center justify-center p-4">
+    <div class="bg-bgCard border border-borderSubtle rounded-2xl max-w-sm w-full p-5 space-y-4 shadow-2xl">
+      <h3 id="modalTitle" class="text-base font-bold text-white">Potwierdź akcję</h3>
+      <p id="modalBody" class="text-xs text-gray-300 leading-relaxed">Czy na pewno chcesz wykonać tę operację?</p>
+      <div class="grid grid-cols-2 gap-2.5 pt-1">
+        <button onclick="closeConfirmModal()" class="touch-btn rounded-xl bg-bgElevated border border-borderSubtle text-gray-300 font-semibold text-xs py-2.5">Anuluj</button>
+        <button id="modalConfirmBtn" class="touch-btn rounded-xl bg-rose-600 hover:bg-rose-500 text-white font-bold text-xs py-2.5">Potwierdzam</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== APPLICATION JAVASCRIPT ==================== -->
+  <script>
+    // Storage keys
+    const LS_URL_KEY = "okx_pro_worker_url";
+    const LS_PIN_KEY = "okx_pro_dashboard_pin";
+
+    // Default fallback state (used before first cloud sync or if offline)
+    const FALLBACK_STATE = {
+      isRunning: true,
+      mode: "DEMO",
+      okxSimulatedHeader: true,
+      balance: 1000.00,
+      totalFeesPaid: 0.00,
+      openPositions: [],
+      history: [],
+      aiLogs: [],
+      lastRunAt: null,
+      lastScanSummary: "Skonfiguruj połączenie w zakładce Chmura 24/7",
+      settings: {
+        marginPerTrade: 50,
+        leverage: 10,
+        tdMode: "isolated",
+        maxPositions: 5,
+        directionMode: "BOTH",
+        takerFeePct: 0.05,
+        minRR: 1.6,
+        minQuality: 70,
+        trailingActPct: 0.9,
+        trailingDistPct: 0.35,
+        btcGuard: true,
+        aiEnabled: false
+      }
+    };
+
+    let appState = structuredClone(FALLBACK_STATE);
+    let isConnected = false;
+    let pollTimer = null;
+    let clockTimer = null;
+    let selectedMode = "DEMO";
+    let selectedDirection = "BOTH";
+    let settingsFormInitialized = false;
+
+    // --- INITIALIZATION ---
+    window.addEventListener("DOMContentLoaded", () => {
+      const savedUrl = localStorage.getItem(LS_URL_KEY) || "";
+      const savedPin = localStorage.getItem(LS_PIN_KEY) || "";
+
+      document.getElementById("inputWorkerUrl").value = savedUrl;
+      document.getElementById("inputDashboardPin").value = savedPin;
+
+      renderAll();
+
+      // Update relative "X sec ago" clock every 2 seconds
+      clockTimer = setInterval(updateRelativeClock, 2000);
+
+      if (!savedUrl || !savedPin) {
+        document.getElementById("cloudNavAlertDot").classList.remove("hidden");
+        switchTab("cloud");
+      } else {
+        fetchCloudState(false);
+        startAutoPolling();
+      }
+    });
+
+    // --- NAVIGATION TABS ---
+    function switchTab(tabName) {
+      const tabs = ["dashboard", "history", "strategy", "cloud"];
+      tabs.forEach(t => {
+        const sec = document.getElementById(`tab-${t}`);
+        const nav = document.getElementById(`nav-${t}`);
+        if (t === tabName) {
+          sec.classList.remove("hidden");
+          nav.classList.remove("text-gray-400");
+          nav.classList.add("text-blue-400");
+        } else {
+          sec.classList.add("hidden");
+          nav.classList.remove("text-blue-400");
+          nav.classList.add("text-gray-400");
+        }
+      });
+
+      if (tabName === "strategy" && !settingsFormInitialized) {
+        populateSettingsForm(appState);
+      }
+    }
+
+    // --- TOAST MESSAGE HELPER (NO alert()) ---
+    function showToast(message, type = "info") {
+      const container = document.getElementById("toastContainer");
+      const el = document.createElement("div");
+      const colors = {
+        success: "bg-emerald-950/95 border-emerald-500/50 text-emerald-200",
+        error: "bg-rose-950/95 border-rose-500/50 text-rose-200",
+        info: "bg-bgElevated/95 border-blue-500/50 text-blue-200"
+      };
+      el.className = `pointer-events-auto border rounded-xl px-3.5 py-2.5 text-xs font-semibold shadow-xl backdrop-blur-md transition-all duration-300 ${colors[type] || colors.info}`;
+      el.textContent = message;
+      container.appendChild(el);
+      setTimeout(() => {
+        el.style.opacity = "0";
+        setTimeout(() => el.remove(), 300);
+      }, 3200);
+    }
+
+    // --- MODAL HELPER (NO confirm()) ---
+    function openConfirmModal(title, body, confirmLabel, onConfirm) {
+      document.getElementById("modalTitle").textContent = title;
+      document.getElementById("modalBody").textContent = body;
+      const btn = document.getElementById("modalConfirmBtn");
+      btn.textContent = confirmLabel;
+      btn.onclick = () => {
+        closeConfirmModal();
+        onConfirm();
+      };
+      document.getElementById("confirmModal").classList.remove("hidden");
+    }
+
+    function closeConfirmModal() {
+      document.getElementById("confirmModal").classList.add("hidden");
+    }
+
+    // --- CLOUD CONNECTION & API CALLS ---
+    function getCredentials() {
+      const rawUrl = (localStorage.getItem(LS_URL_KEY) || "").trim().replace(/\/+$/, "");
+      const pin = (localStorage.getItem(LS_PIN_KEY) || "").trim();
+      return { url: rawUrl, pin };
+    }
+
+    function startAutoPolling() {
+      if (pollTimer) clearInterval(pollTimer);
+      pollTimer = setInterval(() => {
+        const { url, pin } = getCredentials();
+        if (url && pin) fetchCloudState(false);
+      }, 15000);
+    }
+
+    async function connectAndSyncCloud() {
+      const urlInput = document.getElementById("inputWorkerUrl").value.trim().replace(/\/+$/, "");
+      const pinInput = document.getElementById("inputDashboardPin").value.trim();
+      const diagBox = document.getElementById("cloudDiagnosticBox");
+      const btn = document.getElementById("connectCloudBtn");
+
+      if (!urlInput || !urlInput.startsWith("http")) {
+        diagBox.className = "rounded-xl p-3 text-xs leading-relaxed border bg-rose-500/10 border-rose-500/30 text-rose-300";
+        diagBox.textContent = "Podaj pełny adres URL Workera zaczynający się od https:// (np. https://okx-intraday-bot.twoja-nazwa.workers.dev).";
+        diagBox.classList.remove("hidden");
+        return;
+      }
+
+      if (!pinInput) {
+        diagBox.className = "rounded-xl p-3 text-xs leading-relaxed border bg-rose-500/10 border-rose-500/30 text-rose-300";
+        diagBox.textContent = "Wpisz swój DASHBOARD_PIN ustawiony w zakładce Variables and Secrets w Cloudflare.";
+        diagBox.classList.remove("hidden");
+        return;
+      }
+
+      localStorage.setItem(LS_URL_KEY, urlInput);
+      localStorage.setItem(LS_PIN_KEY, pinInput);
+
+      btn.disabled = true;
+      btn.textContent = "Łączenie z chmurą...";
+
+      const ok = await fetchCloudState(true, true);
+
+      btn.disabled = false;
+      btn.textContent = "Połącz i zsynchronizuj z chmurą";
+
+      if (ok) {
+        document.getElementById("cloudNavAlertDot").classList.add("hidden");
+        startAutoPolling();
+        setTimeout(() => switchTab("dashboard"), 650);
+      }
+    }
+
+    async function fetchCloudState(notifyUser = false, showDiagnostic = false) {
+      const { url, pin } = getCredentials();
+      const diagBox = document.getElementById("cloudDiagnosticBox");
+      if (!url || !pin) return false;
+
+      try {
+        const res = await fetch(`${url}/state`, {
+          method: "GET",
+          headers: {
+            "Authorization": `Bearer ${pin}`,
+            "Content-Type": "application/json"
+          }
+        });
+
+        if (res.status === 401) {
+          setConnectionStatus(false);
+          const msg = "Błąd 401: Nieprawidłowy DASHBOARD_PIN. Sprawdź czy hasło wpisane tutaj jest identyczne z sekretem DASHBOARD_PIN w Cloudflare.";
+          if (showDiagnostic) {
+            diagBox.className = "rounded-xl p-3 text-xs leading-relaxed border bg-rose-500/10 border-rose-500/30 text-rose-300";
+            diagBox.textContent = msg;
+            diagBox.classList.remove("hidden");
+          }
+          if (notifyUser) showToast("Nieprawidłowy DASHBOARD_PIN (401)", "error");
+          return false;
+        }
+
+        if (!res.ok) {
+          throw new Error(`Serwer zwrócił kod HTTP ${res.status}`);
+        }
+
+        const data = await res.json();
+        appState = { ...FALLBACK_STATE, ...data };
+        appState.settings = { ...FALLBACK_STATE.settings, ...(data.settings || {}) };
+
+        setConnectionStatus(true);
+        if (!settingsFormInitialized) {
+          populateSettingsForm(appState);
+          settingsFormInitialized = true;
+        }
+        renderAll();
+
+        if (showDiagnostic) {
+          diagBox.className = "rounded-xl p-3 text-xs leading-relaxed border bg-emerald-500/10 border-emerald-500/30 text-emerald-300";
+          diagBox.textContent = "Połączono pomyślnie! Dane portfela zostały pobrane z bazy Cloudflare KV.";
+          diagBox.classList.remove("hidden");
+        }
+        if (notifyUser) showToast("Zsynchronizowano z chmurą 24/7", "success");
+        return true;
+
+      } catch (err) {
+        setConnectionStatus(false);
+        const msg = `Błąd połączenia sieciowego: ${err.message}. Upewnij się, że adres URL Workera jest poprawny i kliknąłeś „Deploy” w Cloudflare.`;
+        if (showDiagnostic) {
+          diagBox.className = "rounded-xl p-3 text-xs leading-relaxed border bg-amber-500/10 border-amber-500/30 text-amber-300";
+          diagBox.textContent = msg;
+          diagBox.classList.remove("hidden");
+        }
+        if (notifyUser) showToast("Brak połączenia z Workerem", "error");
+        return false;
+      }
+    }
+
+    async function postCloudUpdate(payload, successMsg) {
+      const { url, pin } = getCredentials();
+      if (!url || !pin) {
+        showToast("Najpierw połącz aplikację w zakładce Chmura 24/7", "error");
+        switchTab("cloud");
+        return false;
+      }
+
+      try {
+        const res = await fetch(`${url}/update`, {
+          method: "POST",
+          headers: {
+            "Authorization": `Bearer ${pin}`,
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify(payload)
+        });
+
+        if (res.status === 401) {
+          showToast("Nieprawidłowy DASHBOARD_PIN (401)", "error");
+          return false;
+        }
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+
+        const updated = await res.json();
+        appState = { ...FALLBACK_STATE, ...updated };
+        appState.settings = { ...FALLBACK_STATE.settings, ...(updated.settings || {}) };
+        setConnectionStatus(true);
+        renderAll();
+        if (successMsg) showToast(successMsg, "success");
+        return true;
+      } catch (err) {
+        showToast(`Błąd zapisu: ${err.message}`, "error");
+        return false;
+      }
+    }
+
+    async function forceRunNow() {
+      const { url, pin } = getCredentials();
+      if (!url || !pin) {
+        showToast("Najpierw połącz aplikację w zakładce Chmura 24/7", "error");
+        switchTab("cloud");
+        return;
+      }
+
+      const mainBtn = document.getElementById("mainScanBtn");
+      const hdrBtn = document.getElementById("headerScanBtn");
+      mainBtn.disabled = true;
+      hdrBtn.disabled = true;
+      mainBtn.innerHTML = `<span class="animate-spin inline-block">↻</span><span>Skanowanie par OKX...</span>`;
+
+      try {
+        const res = await fetch(`${url}/run-now`, {
+          method: "POST",
+          headers: {
+            "Authorization": `Bearer ${pin}`,
+            "Content-Type": "application/json"
+          }
+        });
+
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const updated = await res.json();
+        appState = { ...FALLBACK_STATE, ...updated };
+        appState.settings = { ...FALLBACK_STATE.settings, ...(updated.settings || {}) };
+        setConnectionStatus(true);
+        renderAll();
+        showToast("Skanowanie rynku zakończone!", "success");
+      } catch (err) {
+        showToast(`Błąd skanowania: ${err.message}`, "error");
+      } finally {
+        mainBtn.disabled = false;
+        hdrBtn.disabled = false;
+        mainBtn.innerHTML = `<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg><span>Wymuś skan teraz</span>`;
+      }
+    }
+
+    function toggleBotRunning() {
+      const nextState = !appState.isRunning;
+      postCloudUpdate(
+        { isRunning: nextState },
+        nextState ? "Bot uruchomiony w chmurze (24/7)" : "Bot wstrzymany (PAUZA)"
+      );
+    }
+
+    function closePositionManual(posId, instId) {
+      openConfirmModal(
+        `Zamknąć ${instId}?`,
+        "Pozycja zostanie natychmiast zamknięta po bieżącej cenie rynkowej z uwzględnieniem prowizji OKX Taker.",
+        "Zamknij pozycję",
+        () => {
+          postCloudUpdate({ closePositionId: posId }, `Zamknięto pozycję ${instId}`);
+        }
+      );
+    }
+
+    // --- STRATEGY SETTINGS FORM ---
+    function populateSettingsForm(state) {
+      const s = state.settings || FALLBACK_STATE.settings;
+      selectMode(state.mode || "DEMO");
+      document.getElementById("cfgOkxSimHeader").checked = state.okxSimulatedHeader !== false;
+      document.getElementById("cfgMargin").value = s.marginPerTrade ?? 50;
+      document.getElementById("cfgMaxPos").value = s.maxPositions ?? 5;
+      document.getElementById("cfgLeverage").value = s.leverage ?? 10;
+      document.getElementById("cfgLevDisplay").textContent = (s.leverage ?? 10) + "x";
+      selectDirection(s.directionMode || "BOTH");
+      document.getElementById("cfgMinRR").value = s.minRR ?? 1.6;
+      document.getElementById("cfgMinQuality").value = s.minQuality ?? 70;
+      document.getElementById("cfgTrailAct").value = s.trailingActPct ?? 0.9;
+      document.getElementById("cfgTrailDist").value = s.trailingDistPct ?? 0.35;
+      document.getElementById("cfgBtcGuard").checked = s.btcGuard !== false;
+      document.getElementById("cfgAiEnabled").checked = Boolean(s.aiEnabled);
+    }
+
+    function selectMode(mode) {
+      selectedMode = mode;
+      const btnDemo = document.getElementById("btnModeDemo");
+      const btnOkx = document.getElementById("btnModeOkx");
+      if (mode === "DEMO") {
+        btnDemo.className = "touch-btn rounded-xl border font-bold text-xs py-2.5 px-3 transition text-center bg-blue-600/20 border-blue-500 text-blue-300";
+        btnOkx.className = "touch-btn rounded-xl border font-bold text-xs py-2.5 px-3 transition text-center bg-bgElevated border-borderSubtle text-gray-400";
+      } else {
+        btnOkx.className = "touch-btn rounded-xl border font-bold text-xs py-2.5 px-3 transition text-center bg-emerald-600/20 border-emerald-500 text-emerald-300";
+        btnDemo.className = "touch-btn rounded-xl border font-bold text-xs py-2.5 px-3 transition text-center bg-bgElevated border-borderSubtle text-gray-400";
+      }
+    }
+
+    function selectDirection(dir) {
+      selectedDirection = dir;
+      ["BOTH", "LONG", "SHORT"].forEach(d => {
+        const el = document.getElementById(`dir-${d}`);
+        if (d === dir) {
+          el.className = "touch-btn rounded-xl border text-xs font-bold py-2 transition bg-blue-600/20 border-blue-500 text-blue-300";
+        } else {
+          el.className = "touch-btn rounded-xl border text-xs font-bold py-2 transition bg-bgElevated border-borderSubtle text-gray-400";
+        }
+      });
+    }
+
+    async function saveStrategyToCloud() {
+      const btn = document.getElementById("saveSettingsBtn");
+      btn.disabled = true;
+      btn.textContent = "Zapisywanie...";
+
+      const payload = {
+        mode: selectedMode,
+        okxSimulatedHeader: document.getElementById("cfgOkxSimHeader").checked,
+        settings: {
+          marginPerTrade: Math.max(5, Number(document.getElementById("cfgMargin").value) || 50),
+          maxPositions: Math.min(10, Math.max(1, Number(document.getElementById("cfgMaxPos").value) || 5)),
+          leverage: Math.min(50, Math.max(1, Number(document.getElementById("cfgLeverage").value) || 10)),
+          directionMode: selectedDirection,
+          minRR: Math.max(1.0, Number(document.getElementById("cfgMinRR").value) || 1.6),
+          minQuality: Math.min(95, Math.max(40, Number(document.getElementById("cfgMinQuality").value) || 70)),
+          trailingActPct: Math.max(0.1, Number(document.getElementById("cfgTrailAct").value) || 0.9),
+          trailingDistPct: Math.max(0.05, Number(document.getElementById("cfgTrailDist").value) || 0.35),
+          btcGuard: document.getElementById("cfgBtcGuard").checked,
+          aiEnabled: document.getElementById("cfgAiEnabled").checked
+        }
+      };
+
+      await postCloudUpdate(payload, "Ustawienia zapisane w chmurze Cloudflare!");
+      btn.disabled = false;
+      btn.textContent = "Zapisz ustawienia w chmurze";
+    }
+
+    function requestDemoReset() {
+      openConfirmModal(
+        "Zresetować konto DEMO?",
+        "Saldo zostanie przywrócone do 1000.00 USDT, a wszystkie otwarte pozycje DEMO, historia transakcji i naliczone prowizje zostaną wyzerowane.",
+        "Resetuj 1000 USDT",
+        () => {
+          postCloudUpdate({ resetDemo: true }, "Konto DEMO zostało zresetowane do 1000.00 USDT");
+        }
+      );
+    }
+
+    // --- UI RENDERING ---
+    function setConnectionStatus(connected) {
+      isConnected = connected;
+      const badge = document.getElementById("connBadge");
+      const dot = document.getElementById("connDot");
+      const text = document.getElementById("connText");
+
+      if (connected) {
+        badge.className = "inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-bold bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 shrink-0";
+        dot.className = "w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse-dot";
+        text.textContent = "CHMURA 24/7";
+      } else {
+        badge.className = "inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-bold bg-amber-500/15 text-amber-400 border border-amber-500/30 shrink-0";
+        dot.className = "w-1.5 h-1.5 rounded-full bg-amber-400";
+        text.textContent = "BRAK POŁĄCZENIA";
+      }
+    }
+
+    function updateRelativeClock() {
+      const el = document.getElementById("lastScanTime");
+      if (!appState.lastRunAt) {
+        el.textContent = "Ostatni skan: brak danych";
+        return;
+      }
+      const diffSec = Math.max(0, Math.floor((Date.now() - appState.lastRunAt) / 1000));
+      if (diffSec < 60) {
+        el.textContent = `Ostatni skan: ${diffSec} sek. temu`;
+      } else {
+        const mins = Math.floor(diffSec / 60);
+        el.textContent = `Ostatni skan: ${mins} min ${diffSec % 60}s temu`;
+      }
+    }
+
+    function formatPrice(p) {
+      const num = Number(p);
+      if (!num || isNaN(num)) return "0.00";
+      if (num >= 1000) return num.toFixed(2);
+      if (num >= 1) return num.toFixed(4);
+      if (num >= 0.01) return num.toFixed(5);
+      return num.toFixed(8);
+    }
+
+    function formatSigned(val) {
+      const n = Number(val) || 0;
+      return (n >= 0 ? "+" : "") + n.toFixed(2);
+    }
+
+    function renderAll() {
+      // 1. Header & Run Button
+      const runBtn = document.getElementById("toggleRunBtn");
+      const runIcon = document.getElementById("runBtnIcon");
+      const runLabel = document.getElementById("runBtnLabel");
+
+      if (appState.isRunning) {
+        runBtn.className = "touch-btn px-3.5 py-2 rounded-xl font-bold text-xs tracking-wide flex items-center gap-1.5 transition active:scale-95 bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 shrink-0";
+        runIcon.textContent = "●";
+        runLabel.textContent = "AKTYWNY";
+      } else {
+        runBtn.className = "touch-btn px-3.5 py-2 rounded-xl font-bold text-xs tracking-wide flex items-center gap-1.5 transition active:scale-95 bg-amber-500/20 text-amber-400 border border-amber-500/40 shrink-0";
+        runIcon.textContent = "❚❚";
+        runLabel.textContent = "PAUZA";
+      }
+
+      const modeText = appState.mode === "OKX_API"
+        ? (appState.okxSimulatedHeader ? "OKX DEMO API" : "OKX LIVE API")
+        : "DEMO (KV)";
+      document.getElementById("modeBadge").textContent = `TRYB: ${modeText}`;
+      document.getElementById("scanSummaryText").textContent = appState.lastScanSummary || "Gotowy do pracy";
+      updateRelativeClock();
+
+      // 2. KPI Metrics
+      const openPos = appState.openPositions || [];
+      const history = appState.history || [];
+      const lockedMargin = openPos.reduce((acc, p) => acc + (Number(p.margin) || 0), 0);
+      const unrealizedNet = openPos.reduce((acc, p) => acc + (Number(p.unrealizedNetPnl) || 0), 0);
+      const realizedNet = history.reduce((acc, h) => acc + (Number(h.netPnl) || 0), 0);
+      const totalEquity = (Number(appState.balance) || 0) + lockedMargin + unrealizedNet;
+
+      document.getElementById("kpiBalance").innerHTML = `${(Number(appState.balance) || 0).toFixed(2)} <span class="text-xs font-semibold text-gray-400">USDT</span>`;
+      document.getElementById("kpiEquity").textContent = `Kapitał całk.: ${totalEquity.toFixed(2)} USDT`;
+
+      const unrEl = document.getElementById("kpiUnrealized");
+      unrEl.innerHTML = `${formatSigned(unrealizedNet)} <span class="text-xs font-semibold">USDT</span>`;
+      unrEl.className = `text-xl font-extrabold font-mono mt-1 ${unrealizedNet > 0 ? "text-emerald-400" : unrealizedNet < 0 ? "text-rose-400" : "text-gray-300"}`;
+      document.getElementById("kpiOpenCount").textContent = `Pozycje: ${openPos.length} / ${appState.settings?.maxPositions || 5}`;
+
+      const realEl = document.getElementById("kpiRealized");
+      realEl.innerHTML = `${formatSigned(realizedNet)} <span class="text-xs font-semibold">USDT</span>`;
+      realEl.className = `text-xl font-extrabold font-mono mt-1 ${realizedNet > 0 ? "text-emerald-400" : realizedNet < 0 ? "text-rose-400" : "text-gray-300"}`;
+
+      const wins = history.filter(h => (Number(h.netPnl) || 0) > 0).length;
+      const winRate = history.length > 0 ? Math.round((wins / history.length) * 100) + "%" : "—";
+      document.getElementById("kpiWinRate").textContent = `Skuteczność: ${winRate} (${history.length} zamk.)`;
+
+      document.getElementById("kpiFees").innerHTML = `-${(Number(appState.totalFeesPaid) || 0).toFixed(2)} <span class="text-xs font-semibold">USDT</span>`;
+      document.getElementById("kpiFeeRate").textContent = `Stawka: ${appState.settings?.takerFeePct || 0.05}% / strona`;
+
+      // 3. Open Positions List
+      document.getElementById("openPosHeaderCount").textContent = openPos.length;
+      const posContainer = document.getElementById("openPositionsList");
+
+      if (openPos.length === 0) {
+        posContainer.innerHTML = `
+          <div class="bg-bgCard/70 border border-dashed border-borderSubtle rounded-2xl p-6 text-center">
+            <p class="text-sm font-semibold text-gray-300">Brak aktywnych pozycji</p>
+            <p class="text-xs text-gray-500 mt-1 leading-relaxed">
+              Silnik skanuje rynek OKX Futures co 1 minutę w poszukiwaniu korekt Fibonacciego (38.2%–61.8%) i potwierdzeń świecowych.
+            </p>
+          </div>
+        `;
+      } else {
+        posContainer.innerHTML = openPos.map(pos => {
+          const isLong = pos.side === "LONG";
+          const pnl = Number(pos.unrealizedNetPnl) || 0;
+          const roePct = pos.margin > 0 ? (pnl / pos.margin) * 100 : 0;
+          const sideBadge = isLong
+            ? `<span class="px-2 py-0.5 rounded-md text-[11px] font-extrabold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">LONG ${pos.leverage}x</span>`
+            : `<span class="px-2 py-0.5 rounded-md text-[11px] font-extrabold bg-rose-500/20 text-rose-400 border border-rose-500/30">SHORT ${pos.leverage}x</span>`;
+
+          return `
+            <div class="bg-bgCard border border-borderSubtle rounded-2xl p-4 space-y-3 shadow-sm">
+              <div class="flex items-center justify-between gap-2">
+                <div class="flex items-center gap-2">
+                  <span class="text-base font-extrabold text-white">${pos.instId.replace("-USDT-SWAP", "")}</span>
+                  ${sideBadge}
+                </div>
+                <div class="text-right">
+                  <div class="text-sm font-extrabold font-mono ${pnl >= 0 ? "text-emerald-400" : "text-rose-400"}">
+                    ${formatSigned(pnl)} USDT
+                  </div>
+                  <div class="text-[11px] font-mono ${pnl >= 0 ? "text-emerald-500/80" : "text-rose-500/80"}">
+                    ${formatSigned(roePct)}% ROE
+                  </div>
+                </div>
+              </div>
+
+              <!-- Prices Grid -->
+              <div class="grid grid-cols-2 gap-2 bg-bgElevated/80 rounded-xl p-2.5 text-xs font-mono">
+                <div>
+                  <span class="text-gray-400 text-[10px] block font-sans">Wejście</span>
+                  <span class="text-gray-200 font-semibold">${formatPrice(pos.entryPrice)}</span>
+                </div>
+                <div>
+                  <span class="text-gray-400 text-[10px] block font-sans">Aktualna cena</span>
+                  <span class="text-white font-bold">${formatPrice(pos.currentPrice || pos.entryPrice)}</span>
+                </div>
+                <div>
+                  <span class="text-rose-400/80 text-[10px] block font-sans">Stop Loss (Fibo)</span>
+                  <span class="text-rose-300">${formatPrice(pos.slPrice)}</span>
+                </div>
+                <div>
+                  <span class="text-emerald-400/80 text-[10px] block font-sans">Take Profit (Ext)</span>
+                  <span class="text-emerald-300">${formatPrice(pos.tpPrice)}</span>
+                </div>
+              </div>
+
+              <!-- Technical Setup Badges -->
+              <div class="flex flex-wrap gap-1.5 text-[11px]">
+                <span class="px-2 py-0.5 rounded-md bg-blue-500/10 text-blue-300 border border-blue-500/20 font-mono">Fibo ${pos.fibPct || 50}%</span>
+                <span class="px-2 py-0.5 rounded-md bg-gray-800 text-gray-300 border border-gray-700">${pos.candlePattern || "Price Action"}</span>
+                <span class="px-2 py-0.5 rounded-md bg-gray-800 text-gray-300 border border-gray-700">${pos.chartPattern || "Trend"}</span>
+                <span class="px-2 py-0.5 rounded-md bg-amber-500/10 text-amber-300 border border-amber-500/20 font-mono">R:R ${pos.rr || "1.6"}</span>
+              </div>
+
+              <!-- Footer & Close Button -->
+              <div class="flex items-center justify-between pt-1 border-t border-borderSubtle/70">
+                <span class="text-[11px] text-gray-400 font-mono">Depozyt: ${pos.margin} USDT</span>
+                <button onclick="closePositionManual('${pos.id}', '${pos.instId}')" class="px-3 py-1.5 rounded-lg bg-rose-500/15 hover:bg-rose-500/25 border border-rose-500/30 text-rose-300 font-bold text-xs active:scale-95 transition">
+                  Zamknij teraz
+                </button>
+              </div>
+            </div>
+          `;
+        }).join("");
+      }
+
+      // 4. AI Logs
+      const aiLogs = appState.aiLogs || [];
+      const aiPill = document.getElementById("aiStatusPill");
+      if (appState.settings?.aiEnabled) {
+        aiPill.textContent = "AI Aktywne";
+        aiPill.className = "text-[11px] px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-300 font-semibold border border-blue-500/30";
+      } else {
+        aiPill.textContent = "AI Wyłączone (Czysta Matematyka)";
+        aiPill.className = "text-[11px] px-2 py-0.5 rounded-full bg-gray-800 text-gray-400 font-semibold";
+      }
+
+      const aiContainer = document.getElementById("aiLogsContainer");
+      if (aiLogs.length === 0) {
+        aiContainer.innerHTML = `<p class="text-xs text-gray-500 text-center py-3">Brak wpisów w dzienniku AI / komunikatów giełdy.</p>`;
+      } else {
+        aiContainer.innerHTML = aiLogs.map(log => {
+          const timeStr = new Date(log.ts).toLocaleTimeString("pl-PL", { hour: "2-digit", minute: "2-digit" });
+          return `
+            <div class="bg-bgElevated/80 border border-borderSubtle/60 rounded-xl p-2.5 text-xs">
+              <div class="flex justify-between items-center text-[11px] text-blue-400 font-bold mb-0.5">
+                <span>${log.tag || "System"}</span>
+                <span class="font-mono text-gray-500 font-normal">${timeStr}</span>
+              </div>
+              <p class="text-gray-300 leading-snug">${log.text}</p>
+            </div>
+          `;
+        }).join("");
+      }
+
+      // 5. History List
+      document.getElementById("historyCountBadge").textContent = `${history.length} pozycji`;
+      const histContainer = document.getElementById("historyList");
+      if (history.length === 0) {
+        histContainer.innerHTML = `
+          <div class="bg-bgCard/70 border border-dashed border-borderSubtle rounded-2xl p-6 text-center">
+            <p class="text-xs text-gray-400">Historia transakcji jest jeszcze pusta.</p>
+          </div>
+        `;
+      } else {
+        histContainer.innerHTML = history.map(h => {
+          const isWin = (Number(h.netPnl) || 0) >= 0;
+          const dateStr = new Date(h.closedAt).toLocaleString("pl-PL", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" });
+          return `
+            <div class="bg-bgCard border border-borderSubtle rounded-2xl p-3.5 space-y-2">
+              <div class="flex items-center justify-between">
+                <div class="flex items-center gap-2">
+                  <span class="font-extrabold text-sm text-white">${h.instId.replace("-USDT-SWAP", "")}</span>
+                  <span class="text-[10px] font-bold px-1.5 py-0.5 rounded ${h.side === "LONG" ? "bg-emerald-500/20 text-emerald-400" : "bg-rose-500/20 text-rose-400"}">
+                    ${h.side} ${h.leverage}x
+                  </span>
+                </div>
+                <div class="text-right font-mono">
+                  <span class="text-sm font-extrabold ${isWin ? "text-emerald-400" : "text-rose-400"}">
+                    ${formatSigned(h.netPnl)} USDT
+                  </span>
+                </div>
+              </div>
+
+              <div class="flex justify-between text-[11px] text-gray-400 font-mono">
+                <span>${formatPrice(h.entryPrice)} → ${formatPrice(h.exitPrice)}</span>
+                <span class="text-amber-400/90">Prowizja: -${Number(h.fee || 0).toFixed(3)}</span>
+              </div>
+
+              <div class="text-[11px] text-gray-300 bg-bgElevated/70 rounded-lg px-2.5 py-1.5 flex items-center justify-between gap-2">
+                <span class="truncate">${h.reason || "Zamknięto"}</span>
+                <span class="text-gray-500 font-mono shrink-0">${dateStr}</span>
+              </div>
+            </div>
+          `;
+        }).join("");
+      }
+    }
+  </script>
+</body>
+</html>
