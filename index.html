@@ -1,0 +1,1505 @@
+<!DOCTYPE html>
+<html lang="pl" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="OKX Pro v9.1" />
+  <meta name="theme-color" content="#060911" />
+  <title>OKX Intraday Pro AI v9.1 (USDC)</title>
+
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Google Fonts: Inter & JetBrains Mono -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;600;700;800&display=swap" rel="stylesheet" />
+
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', '-apple-system', 'BlinkMacSystemFont', 'sans-serif'],
+            mono: ['JetBrains Mono', 'monospace'],
+          }
+        }
+      }
+    };
+  </script>
+
+  <style>
+    * {
+      -webkit-tap-highlight-color: transparent;
+      box-sizing: border-box;
+    }
+    html, body {
+      background-color: #060911;
+      color: #f1f5f9;
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      padding-top: env(safe-area-inset-top, 0px);
+      padding-bottom: calc(96px + env(safe-area-inset-bottom, 0px));
+      -webkit-overflow-scrolling: touch;
+      overflow-x: hidden;
+      width: 100%;
+    }
+    .glass-card {
+      background: linear-gradient(145deg, rgba(17, 24, 39, 0.92), rgba(10, 15, 28, 0.96));
+      border: 1px solid rgba(51, 65, 85, 0.6);
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+    }
+    .tab-bar {
+      padding-bottom: max(12px, env(safe-area-inset-bottom, 12px));
+      background: rgba(6, 9, 17, 0.96);
+      border-top: 1px solid rgba(51, 65, 85, 0.7);
+      backdrop-filter: blur(18px);
+      -webkit-backdrop-filter: blur(18px);
+    }
+    input, select, textarea {
+      font-size: 16px !important;
+    }
+    .touch-btn {
+      min-height: 44px;
+      cursor: pointer;
+      touch-action: manipulation;
+      transition: transform 0.12s ease, opacity 0.15s ease, background-color 0.15s ease;
+    }
+    .touch-btn:active {
+      transform: scale(0.97);
+    }
+  </style>
+</head>
+<body class="antialiased selection:bg-blue-500/30">
+
+  <!-- ==================== STICKY TOP HEADER ==================== -->
+  <header class="sticky top-0 z-30 bg-[#060911]/95 backdrop-blur-xl border-b border-slate-800/80 px-4 py-3 flex items-center justify-between gap-2">
+    <div class="min-w-0">
+      <div class="flex items-center gap-2">
+        <span id="statusDot" class="w-2.5 h-2.5 rounded-full bg-amber-400 animate-pulse shrink-0"></span>
+        <h1 class="text-base font-extrabold tracking-tight text-white truncate">
+          OKX Pro AI <span class="text-blue-400 font-mono text-xs bg-blue-500/15 border border-blue-500/30 px-1.5 py-0.5 rounded-md">v9.1</span>
+        </h1>
+      </div>
+      <p id="headerSub" class="text-[11px] text-slate-400 mt-0.5 truncate">Brak połączenia — przejdź do System</p>
+    </div>
+
+    <div class="flex items-center gap-2 shrink-0">
+      <button type="button" onclick="triggerRunNow()" id="btnScanNow" class="touch-btn px-3.5 py-2 rounded-xl bg-blue-600/20 border border-blue-500/40 text-blue-300 text-xs font-bold">
+        Skanuj
+      </button>
+      <button type="button" onclick="toggleRunning()" id="btnToggleRun" class="touch-btn px-3.5 py-2 rounded-xl bg-emerald-600 text-white text-xs font-extrabold shadow-lg shadow-emerald-600/20">
+        START
+      </button>
+    </div>
+  </header>
+
+  <!-- ==================== TOAST NOTIFICATION STACK ==================== -->
+  <div id="toastBox" class="fixed top-20 left-4 right-4 z-50 max-w-lg mx-auto pointer-events-none flex flex-col gap-2"></div>
+
+  <!-- ==================== MAIN CONTAINER ==================== -->
+  <main class="max-w-lg mx-auto px-4 pt-3.5 space-y-4">
+
+    <!-- ==================== ZAKŁADKA 1: PULPIT (POZYCJE + METRYKI) ==================== -->
+    <div id="tab-positions" class="space-y-4">
+      <!-- KARTA PORTFELA USDC -->
+      <section class="glass-card rounded-3xl p-4 shadow-xl space-y-3">
+        <div class="flex items-start justify-between gap-2">
+          <div>
+            <span class="text-[11px] uppercase tracking-wider font-bold text-slate-400">Dostępny Kapitał (USDC)</span>
+            <div id="balanceDisplay" class="text-3xl font-extrabold font-mono text-white mt-0.5 tracking-tight">
+              0.00 <span class="text-sm font-bold text-blue-400">USDC</span>
+            </div>
+          </div>
+          <div class="text-right">
+            <span id="modeBadge" class="inline-block px-2.5 py-1 rounded-lg text-[10px] font-extrabold tracking-wide bg-slate-800 text-slate-300 border border-slate-700">
+              DEMO CHMURA
+            </span>
+            <div id="feesDisplay" class="text-[11px] font-mono text-slate-400 mt-1.5">Prowizje: 0.00 USDC</div>
+          </div>
+        </div>
+
+        <!-- Pasek OKX Live Equity -->
+        <div id="okxLiveRow" class="hidden pt-2.5 border-t border-slate-800/80 flex items-center justify-between text-xs">
+          <div class="space-x-2 font-mono">
+            <span class="text-slate-400">Wolne: <strong id="okxAvailText" class="text-emerald-400">0.00</strong></span>
+            <span class="text-slate-600">|</span>
+            <span class="text-slate-400">Equity: <strong id="okxEquityText" class="text-blue-300">0.00</strong></span>
+          </div>
+          <button type="button" onclick="syncOkxNow()" class="px-2.5 py-1 rounded-lg bg-blue-500/15 border border-blue-500/30 text-blue-300 font-semibold active:scale-95">
+            Odśwież
+          </button>
+        </div>
+
+        <!-- 3 Kafelki szybkich statystyk -->
+        <div class="grid grid-cols-3 gap-2 pt-1">
+          <div class="bg-slate-900/90 border border-slate-800/90 rounded-2xl p-2.5">
+            <span class="text-[10px] text-slate-400 block">Niezrealiz. PnL</span>
+            <span id="kpiUnrealizedPnl" class="text-xs font-extrabold font-mono text-slate-200 mt-0.5 block">0.000 USDC</span>
+          </div>
+          <div class="bg-slate-900/90 border border-slate-800/90 rounded-2xl p-2.5">
+            <span class="text-[10px] text-slate-400 block">Zamknięty PnL</span>
+            <span id="kpiRealizedPnl" class="text-xs font-extrabold font-mono text-slate-200 mt-0.5 block">0.00 USDC</span>
+          </div>
+          <div class="bg-slate-900/90 border border-slate-800/90 rounded-2xl p-2.5">
+            <span class="text-[10px] text-slate-400 block">Skuteczność</span>
+            <span id="kpiWinRate" class="text-xs font-extrabold font-mono text-blue-300 mt-0.5 block">0% (0/0)</span>
+          </div>
+        </div>
+
+        <!-- Status ostatniego skanu -->
+        <div id="scanSummaryBox" class="text-[11px] font-mono text-slate-300 bg-slate-950/70 rounded-2xl px-3 py-2.5 border border-slate-800/90 leading-relaxed">
+          Połącz z Workerem w zakładce System.
+        </div>
+      </section>
+
+      <!-- OTWARTYCH POZYCJI -->
+      <section class="space-y-2.5">
+        <div class="flex items-center justify-between px-1">
+          <h2 class="text-xs font-bold uppercase tracking-wider text-slate-400">
+            Aktywne Pozycje (<span id="openCount">0</span>)
+          </h2>
+          <button type="button" onclick="refreshDashboardPositions()" class="text-xs text-blue-400 font-semibold px-2 py-1 rounded-lg active:bg-blue-500/10">
+            Odśwież z OKX
+          </button>
+        </div>
+        <div id="openPositionsList" class="space-y-2.5"></div>
+      </section>
+
+      <!-- OSTATNIE DECYZJE AI -->
+      <section class="space-y-2.5">
+        <div class="flex items-center justify-between px-1">
+          <h2 class="text-xs font-bold uppercase tracking-wider text-blue-400">
+            ✦ Ostatnie Decyzje Analityka AI
+          </h2>
+          <button type="button" onclick="switchTab('history')" class="text-[11px] text-slate-400 hover:text-slate-200 underline">
+            Pełny dziennik →
+          </button>
+        </div>
+        <div id="dashboardLogsPreview" class="space-y-2"></div>
+      </section>
+    </div>
+
+    <!-- ==================== ZAKŁADKA 2: LOGI AI & HISTORIA ==================== -->
+    <div id="tab-history" class="hidden space-y-4">
+      <!-- Przełącznik okresu -->
+      <div class="grid grid-cols-4 gap-1.5 bg-slate-900/90 p-1.5 rounded-2xl border border-slate-800">
+        <button type="button" onclick="setHistoryPeriod('1D')" id="histFilter-1D" class="py-2 rounded-xl text-xs font-bold bg-blue-600 text-white transition">
+          24h
+        </button>
+        <button type="button" onclick="setHistoryPeriod('7D')" id="histFilter-7D" class="py-2 rounded-xl text-xs font-semibold text-slate-400 transition">
+          7 Dni
+        </button>
+        <button type="button" onclick="setHistoryPeriod('MONTH')" id="histFilter-MONTH" class="py-2 rounded-xl text-xs font-semibold text-slate-400 transition">
+          Miesiąc
+        </button>
+        <button type="button" onclick="setHistoryPeriod('ALL')" id="histFilter-ALL" class="py-2 rounded-xl text-xs font-semibold text-slate-400 transition">
+          Wszystko
+        </button>
+      </div>
+
+      <!-- Karta Podsumowania + Trener AI -->
+      <div class="glass-card rounded-3xl p-4 space-y-3">
+        <div class="flex items-center justify-between">
+          <div>
+            <span id="histPeriodLabel" class="text-[11px] uppercase tracking-wider font-semibold text-slate-400">Wynik: Ostatnie 24h</span>
+            <div id="netPnlTotal" class="text-xl font-extrabold font-mono text-white mt-0.5">
+              0.00 USDC <span class="text-sm">(0.00%)</span>
+            </div>
+          </div>
+          <div class="text-right">
+            <span id="histWinRateBadge" class="inline-block px-2.5 py-1 rounded-lg text-xs font-mono font-bold bg-slate-800 text-slate-300 border border-slate-700">
+              WR: 0% (0/0)
+            </span>
+            <div id="aiAuditProgress" class="text-[11px] font-mono text-blue-400 mt-1">
+              Audyt AI: 0/20 zamkn.
+            </div>
+          </div>
+        </div>
+
+        <div class="pt-2.5 border-t border-slate-800/90 space-y-2.5">
+          <div class="flex items-center justify-between gap-2">
+            <span class="text-[11px] font-bold text-blue-300">🎓 Wnioski Trenera AI (co 20 pozycji):</span>
+            <button type="button" id="btnManualAiReview" onclick="triggerManualAiReview()" class="px-2.5 py-1 rounded-lg bg-blue-600/20 border border-blue-500/40 text-blue-300 text-[11px] font-bold active:scale-95">
+              Analizuj teraz
+            </button>
+          </div>
+          <p id="aiLessonsBox" class="text-[11px] text-slate-300 bg-slate-900/80 rounded-xl p-2.5 border border-slate-800 leading-relaxed">
+            Trwa zbieranie danych do pierwszej analizy 20 zamkniętych pozycji.
+          </p>
+
+          <div class="space-y-1.5">
+            <span class="text-[11px] font-bold text-emerald-300 block">🧬 Profile Zachowań per Kryptowaluta:</span>
+            <div id="aiCoinLessonsList" class="space-y-1.5">
+              <div class="text-[11px] text-slate-500 bg-slate-900/60 rounded-xl px-2.5 py-2 border border-slate-800/80">
+                Brak jeszcze indywidualnych profili monet — pojawią się po pierwszym audycie.
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Zamknięte pozycje -->
+      <section class="space-y-2">
+        <div class="flex items-center justify-between px-1">
+          <h2 class="text-xs font-bold uppercase tracking-wider text-slate-400">Historia Transakcji</h2>
+          <button type="button" onclick="clearHistoryAndLogsConfirm()" class="text-[11px] text-rose-400 hover:text-rose-300 font-semibold">
+            Wyczyść historię i logi
+          </button>
+        </div>
+        <div id="historyList" class="space-y-2"></div>
+      </section>
+
+      <!-- Pełny Dziennik AI -->
+      <section class="space-y-2 pt-1">
+        <div class="flex items-center justify-between px-1">
+          <h2 class="text-xs font-bold uppercase tracking-wider text-blue-400">Pełny Dziennik AI & OKX</h2>
+          <button type="button" onclick="clearAiCooldowns()" class="text-[11px] text-slate-400 hover:text-slate-200 underline">
+            Wyczyść pauzy par
+          </button>
+        </div>
+        <div id="aiLogsList" class="space-y-2"></div>
+      </section>
+    </div>
+
+    <!-- ==================== ZAKŁADKA 3: USTAWIENIA ==================== -->
+    <div id="tab-settings" class="hidden space-y-4">
+      <!-- Zarządzanie kapitałem USDC -->
+      <div class="glass-card rounded-3xl p-4 space-y-3">
+        <h2 class="text-sm font-bold text-white border-b border-slate-800 pb-2">Zarządzanie Kapitałem USDC</h2>
+        <div class="grid grid-cols-2 gap-2.5">
+          <div>
+            <label class="text-[11px] text-slate-400 block">Depozyt / pozycja (USDC)</label>
+            <input id="setMargin" type="number" step="0.5" min="1" class="w-full mt-1 bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-white font-mono" />
+          </div>
+          <div>
+            <label class="text-[11px] text-slate-400 block">Limit budżetu bota (0=max)</label>
+            <input id="setMaxBudget" type="number" step="1" min="0" class="w-full mt-1 bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-white font-mono" />
+          </div>
+          <div>
+            <label class="text-[11px] text-slate-400 block">Domyślny lewar (x)</label>
+            <input id="setLeverage" type="number" min="1" max="100" class="w-full mt-1 bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-white font-mono" />
+          </div>
+          <div>
+            <label class="text-[11px] text-slate-400 block">Maks. auto-lewar (minSz)</label>
+            <input id="setMaxAutoLev" type="number" min="1" max="100" class="w-full mt-1 bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-white font-mono" />
+          </div>
+          <div>
+            <label class="text-[11px] text-slate-400 block">Maks. otwartych pozycji</label>
+            <input id="setMaxPos" type="number" min="1" max="10" class="w-full mt-1 bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-white font-mono" />
+          </div>
+          <div>
+            <label class="text-[11px] text-slate-400 block">Maks. spread arkusza (%)</label>
+            <input id="setMaxSpread" type="number" step="0.01" min="0.01" class="w-full mt-1 bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-white font-mono" />
+          </div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-2.5">
+          <div>
+            <label class="text-[11px] text-slate-400 block">Min. pewność AI (0-100)</label>
+            <input id="setMinQual" type="number" min="50" max="95" class="w-full mt-1 bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-white font-mono" />
+          </div>
+          <div>
+            <label class="text-[11px] text-slate-400 block">Kierunek gry</label>
+            <select id="setDir" class="w-full mt-1 bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-white">
+              <option value="BOTH">LONG + SHORT</option>
+              <option value="LONG">Tylko LONG</option>
+              <option value="SHORT">Tylko SHORT</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <!-- Warstwa AI (Gemini 4 & 3 + Surowość Bramkarza) -->
+      <div class="glass-card rounded-3xl p-4 space-y-3 border border-blue-500/30">
+        <div class="flex items-center justify-between border-b border-slate-800 pb-2">
+          <div>
+            <h2 class="text-sm font-bold text-white">Analityk AI & Menedżer Pozycji</h2>
+            <p class="text-[11px] text-slate-400">Multi-Pair DNA 1H/15m/5m, OI, VWAP i Taker Flow</p>
+          </div>
+          <input id="setAiEnabled" type="checkbox" class="w-6 h-6 accent-blue-500 rounded" />
+        </div>
+
+        <div>
+          <label class="text-[11px] text-slate-400 block">Model Gemini</label>
+          <select id="setGeminiModel" class="w-full mt-1 bg-slate-900 border border-slate-700 rounded-xl px-3 py-2.5 text-white">
+            <option value="gemini-4-hydrogen">Gemini 4 Hydrogen (Rekomendowany)</option>
+            <option value="gemini-4-argon">Gemini 4 Argon (Głęboka analiza)</option>
+            <option value="gemini-4-carbon">Gemini 4 Carbon (Flagowy)</option>
+            <option value="gemini-3.8-flash">Gemini 3.8 Flash</option>
+            <option value="gemini-3.5-flash-lite">Gemini 3.5 Flash-Lite</option>
+          </select>
+        </div>
+
+        <div class="grid grid-cols-2 gap-2.5">
+          <div>
+            <label class="text-[11px] text-slate-400 block">Surowość Analityka AI</label>
+            <select id="setAiStrictness" class="w-full mt-1 bg-slate-900 border border-slate-700 rounded-xl px-3 py-2.5 text-white">
+              <option value="LOW">Niska (Ofensywna)</option>
+              <option value="MEDIUM">Średnia (Zbalansowana)</option>
+              <option value="HIGH">Wysoka (Tylko pewniaki A+)</option>
+            </select>
+          </div>
+          <div>
+            <label class="text-[11px] text-slate-400 block">Poziom myślenia AI</label>
+            <select id="setThinkingLevel" class="w-full mt-1 bg-slate-900 border border-slate-700 rounded-xl px-3 py-2.5 text-white">
+              <option value="low">Low (Szybki ~1s)</option>
+              <option value="medium">Medium (Zbalansowany)</option>
+              <option value="high">High (Głęboki)</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-2.5">
+          <div>
+            <label class="text-[11px] text-slate-400 block">Kontrola pozycji AI (sek)</label>
+            <input id="setAiInterval" type="number" step="60" min="60" class="w-full mt-1 bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-white font-mono" />
+          </div>
+          <div>
+            <label class="text-[11px] text-slate-400 block">Pauza po odrzuceniu (min)</label>
+            <input id="setAiRejectCooldownMin" type="number" min="1" max="240" step="1" value="25" class="w-full mt-1 bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-blue-300 font-mono font-bold" />
+          </div>
+        </div>
+      </div>
+
+      <!-- Wydajność Skanera & Plan Cloudflare Workers -->
+      <div class="glass-card rounded-3xl p-4 space-y-3 border border-emerald-500/25">
+        <div class="flex items-center justify-between border-b border-slate-800 pb-2">
+          <div>
+            <h2 class="text-sm font-bold text-white">Limit Radaru & Plan Cloudflare</h2>
+            <p class="text-[11px] text-slate-400">50% rotacja par + 50% najgorętsze monety</p>
+          </div>
+          <span id="cfPlanBadge" class="px-2.5 py-0.5 rounded-lg bg-emerald-500/20 text-emerald-300 text-[11px] font-mono font-bold">PAID 16</span>
+        </div>
+
+        <div class="grid grid-cols-2 gap-2.5">
+          <div>
+            <label class="text-[11px] text-slate-400 block">Plan Cloudflare Workers</label>
+            <select id="setCfPlan" onchange="onCfPlanChange()" class="w-full mt-1 bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-white font-semibold">
+              <option value="PAID">Paid ($5+ • 1000 subreq)</option>
+              <option value="CUSTOM">Enterprise (10 000)</option>
+              <option value="FREE">Free (limit 50 subreq)</option>
+            </select>
+          </div>
+          <div>
+            <label class="text-[11px] text-slate-400 block">Maks. par na 1 cykl radaru</label>
+            <input id="setMaxPairsBatch" type="number" min="4" max="10000" step="1" value="16" class="w-full mt-1 bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-emerald-300 font-mono font-bold" />
+          </div>
+        </div>
+
+        <div class="grid grid-cols-3 gap-1.5">
+          <button type="button" onclick="applyScanLimitPreset(10, 'PAID')" class="py-2 px-2 rounded-xl bg-slate-900 border border-slate-700 text-slate-300 text-[11px] font-mono font-semibold active:scale-95">
+            10 (Oszczędny)
+          </button>
+          <button type="button" onclick="applyScanLimitPreset(16, 'PAID')" class="py-2 px-2 rounded-xl bg-emerald-600/20 border border-emerald-500/40 text-emerald-300 text-[11px] font-mono font-bold active:scale-95">
+            16 (Pula 1m)
+          </button>
+          <button type="button" onclick="applyScanLimitPreset(30, 'PAID')" class="py-2 px-2 rounded-xl bg-blue-600/20 border border-blue-500/40 text-blue-300 text-[11px] font-mono font-bold active:scale-95">
+            30 (Szybki)
+          </button>
+        </div>
+      </div>
+
+      <!-- Skanowane pary OKX Europe -->
+      <div class="glass-card rounded-3xl p-4 space-y-2.5">
+        <div class="flex items-center justify-between border-b border-slate-800 pb-2">
+          <div>
+            <h2 class="text-sm font-bold text-white">Skanowane Pary OKX X-Perp</h2>
+            <p class="text-[11px] text-slate-400">Blokada akcji/indeksów — tylko kryptowaluty</p>
+          </div>
+          <span id="pairsCountBadge" class="px-2.5 py-0.5 rounded-lg bg-blue-500/20 text-blue-300 text-xs font-mono font-bold">0 par</span>
+        </div>
+
+        <div class="flex items-center justify-between bg-slate-900/80 rounded-xl px-3 py-2 border border-slate-800">
+          <div>
+            <span class="text-xs font-bold text-emerald-300 block">🛡️ Tylko Kryptowaluty (Blokada Akcji)</span>
+            <span class="text-[10px] text-slate-400">Odrzuca GOOGL, NVDA, TSLA, ANTHROPIC, złoto, indeksy</span>
+          </div>
+          <input id="setCryptoOnly" type="checkbox" checked class="w-5 h-5 accent-emerald-500 rounded shrink-0" />
+        </div>
+
+        <textarea id="setPairs" rows="4" oninput="updatePairsCount(); renderDiscoveredChips();" autocapitalize="characters" autocorrect="off" spellcheck="false" placeholder="BTC-USD_UM_XPERP-310404, ETH-USD_UM_XPERP-310404..." class="w-full bg-slate-900 border border-slate-700 rounded-xl p-3 text-white font-mono text-xs leading-relaxed"></textarea>
+
+        <div class="grid grid-cols-1 gap-2">
+          <button type="button" id="btnAiFilterCrypto" onclick="runAiCryptoScreener()" class="touch-btn w-full py-2.5 px-3 rounded-xl bg-emerald-600/25 border border-emerald-500/50 text-emerald-300 text-xs font-bold flex items-center justify-center gap-1.5 active:scale-95">
+            <span>🧠 AI Przesiej OKX i zostaw TYLKO Kryptowaluty</span>
+          </button>
+          <button type="button" id="btnDiscoverPairs" onclick="discoverNewOkxPairs()" class="touch-btn w-full py-2.5 px-3 rounded-xl bg-blue-600/20 border border-blue-500/40 text-blue-300 text-xs font-bold flex items-center justify-center gap-1.5 active:scale-95">
+            <span>🔍 Pobierz z OKX brakujące pary krypto *_UM_XPERP-*</span>
+          </button>
+          <button type="button" onclick="fillDefaultUsdcPairs()" class="w-full py-2 rounded-xl bg-slate-800/90 border border-slate-700 text-slate-300 text-xs font-semibold active:scale-95">
+            Wstaw domyślną listę 50 kryptowalut *_UM_XPERP-*
+          </button>
+        </div>
+
+        <div id="discoveredPairsBox" class="hidden pt-2.5 mt-1 border-t border-slate-800/90 space-y-2.5">
+          <div class="flex items-center justify-between gap-2">
+            <span id="discoveredPairsTitle" class="text-[11px] font-bold text-emerald-400">Znaleziono nowe pary krypto (0):</span>
+            <button type="button" onclick="addAllDiscoveredPairs()" class="px-2.5 py-1 rounded-lg bg-emerald-600/25 border border-emerald-500/40 text-emerald-300 text-[11px] font-bold active:scale-95">
+              + Dodaj wszystkie
+            </button>
+          </div>
+          <div id="discoveredPairsChips" class="flex flex-wrap gap-1.5 max-h-48 overflow-y-auto pr-1"></div>
+        </div>
+      </div>
+
+      <button type="button" onclick="saveSettings()" id="btnSaveSettings" class="touch-btn w-full py-3.5 rounded-2xl bg-blue-600 hover:bg-blue-500 font-bold text-white shadow-lg shadow-blue-600/25">
+        Zapisz ustawienia w chmurze
+      </button>
+    </div>
+
+    <!-- ==================== ZAKŁADKA 4: SYSTEM & CHMURA ==================== -->
+    <div id="tab-cloud" class="hidden space-y-4">
+      <div class="glass-card rounded-3xl p-4 space-y-3">
+        <h2 class="text-sm font-bold text-white">Połączenie z Cloudflare Worker</h2>
+        <div>
+          <label class="text-[11px] text-slate-400 block">Adres URL Workera</label>
+          <input id="workerUrlInput" type="url" placeholder="https://twoj-bot.workers.dev" autocapitalize="none" autocorrect="off" spellcheck="false" class="w-full mt-1 bg-slate-900 border border-slate-700 rounded-xl px-3 py-2.5 text-white font-mono" />
+        </div>
+        <div>
+          <label class="text-[11px] text-slate-400 block">DASHBOARD_PIN</label>
+          <input id="workerPinInput" type="password" placeholder="Twoje hasło z Cloudflare" autocapitalize="none" autocorrect="off" class="w-full mt-1 bg-slate-900 border border-slate-700 rounded-xl px-3 py-2.5 text-white font-mono" />
+        </div>
+        <button type="button" onclick="connectCloud()" id="btnConnectCloud" class="touch-btn w-full py-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 font-bold text-white shadow-lg shadow-emerald-600/20">
+          Połącz i zsynchronizuj z chmurą
+        </button>
+      </div>
+
+      <div class="glass-card rounded-3xl p-4 space-y-2.5">
+        <h2 class="text-sm font-bold text-white">Status Kluczy API & Bram Proxy GAS</h2>
+        <div class="flex items-center justify-between text-xs py-1">
+          <span class="text-slate-300 font-mono">GEMINI_API_KEY</span>
+          <span id="geminiKeyStatus" class="px-2.5 py-0.5 rounded-lg bg-slate-800 text-slate-400 font-semibold">Nieznany</span>
+        </div>
+        <div class="flex items-center justify-between text-xs py-1">
+          <span class="text-slate-300 font-mono">OKX API Keys (X-Perp USDC)</span>
+          <span id="okxKeyStatus" class="px-2.5 py-0.5 rounded-lg bg-slate-800 text-slate-400 font-semibold">Nieznany</span>
+        </div>
+        <div class="flex items-center justify-between text-xs py-1">
+          <span class="text-slate-300 font-mono">Bramki Proxy GAS</span>
+          <span id="proxyPoolStatus" class="px-2.5 py-0.5 rounded-lg bg-slate-800 text-slate-400 font-semibold">Nieznany</span>
+        </div>
+
+        <button type="button" onclick="runDiagnosticProxies()" id="btnTestProxies" class="touch-btn w-full mt-1 py-2.5 rounded-xl bg-emerald-600/20 border border-emerald-500/40 text-emerald-300 text-xs font-bold active:scale-95">
+          🔌 Testuj wszystkie bramki Proxy GAS (#1–#15)
+        </button>
+
+        <div id="proxyHealthList" class="hidden pt-2 border-t border-slate-800/80 space-y-1.5"></div>
+      </div>
+
+      <div class="glass-card rounded-3xl p-4 space-y-2.5">
+        <h2 class="text-sm font-bold text-white">Tryb Rachunku (USDC) & Diagnostyka</h2>
+        <div class="grid grid-cols-3 gap-2">
+          <button type="button" onclick="setAccountMode('DEMO', true)" id="modeBtnDemo" class="touch-btn py-2.5 px-2 rounded-xl border border-slate-700 bg-slate-900 text-xs font-bold text-slate-200">
+            DEMO Chmura
+          </button>
+          <button type="button" onclick="setAccountMode('OKX_API', true)" id="modeBtnOkxDemo" class="touch-btn py-2.5 px-2 rounded-xl border border-slate-700 bg-slate-900 text-xs font-bold text-amber-300">
+            OKX Demo API
+          </button>
+          <button type="button" onclick="setAccountMode('OKX_API', false)" id="modeBtnOkxReal" class="touch-btn py-2.5 px-2 rounded-xl border border-rose-800/60 bg-rose-950/30 text-rose-300 text-xs font-bold">
+            OKX REAL
+          </button>
+        </div>
+
+        <button type="button" onclick="runDiagnosticTestOrder()" id="btnTestOrder" class="touch-btn w-full mt-1 py-2.5 rounded-xl bg-amber-500/20 border border-amber-500/40 text-amber-300 text-xs font-bold active:scale-95">
+          🧪 Testuj zlecenie na OKX (*_UM_XPERP-*)
+        </button>
+
+        <button type="button" onclick="runDiagnosticAiScan()" id="btnTestAiScan" class="touch-btn w-full mt-1 py-2.5 rounded-xl bg-blue-500/20 border border-blue-500/40 text-blue-300 text-xs font-bold active:scale-95">
+          🧠 Test skanowania losowej pary krypto + AI
+        </button>
+
+        <div class="grid grid-cols-2 gap-2 pt-1">
+          <button type="button" onclick="clearHistoryAndLogsConfirm()" class="touch-btn py-2.5 px-2 rounded-xl bg-slate-800/90 border border-slate-700 text-slate-300 text-[11px] font-semibold">
+            Wyczyść Historię/AI
+          </button>
+          <button type="button" onclick="resetDemoBalance()" class="touch-btn py-2.5 px-2 rounded-xl bg-rose-950/40 border border-rose-800/50 text-rose-300 text-[11px] font-semibold">
+            Reset DEMO (1000$)
+          </button>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- ==================== FIXED 4-TAB BOTTOM NAVIGATION ==================== -->
+  <nav class="tab-bar fixed bottom-0 inset-x-0 z-30 grid grid-cols-4 text-center pt-2 px-1">
+    <button type="button" onclick="switchTab('positions')" id="nav-positions" class="min-h-[48px] flex flex-col items-center justify-center text-blue-400 text-[11px] font-bold">
+      <svg class="w-5 h-5 mb-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/></svg>
+      <span>Pulpit</span>
+    </button>
+    <button type="button" onclick="switchTab('history')" id="nav-history" class="min-h-[48px] flex flex-col items-center justify-center text-slate-400 text-[11px] font-semibold">
+      <svg class="w-5 h-5 mb-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+      <span>Logi & Wyniki</span>
+    </button>
+    <button type="button" onclick="switchTab('settings')" id="nav-settings" class="min-h-[48px] flex flex-col items-center justify-center text-slate-400 text-[11px] font-semibold">
+      <svg class="w-5 h-5 mb-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4"/></svg>
+      <span>Ustawienia</span>
+    </button>
+    <button type="button" onclick="switchTab('cloud')" id="nav-cloud" class="min-h-[48px] flex flex-col items-center justify-center text-slate-400 text-[11px] font-semibold">
+      <svg class="w-5 h-5 mb-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 15a4 4 0 004 4h9a5 5 0 10-.1-9.999 5.002 5.002 0 10-9.78 2.096A4.001 4.001 0 003 15z"/></svg>
+      <span>System</span>
+    </button>
+  </nav>
+
+  <!-- ==================== INLINE CONFIRM MODAL ==================== -->
+  <div id="confirmModal" class="hidden fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="glass-card rounded-3xl max-w-sm w-full p-5 space-y-4 shadow-2xl">
+      <h3 id="modalTitle" class="text-base font-bold text-white">Potwierdzenie</h3>
+      <p id="modalText" class="text-xs text-slate-300 leading-relaxed"></p>
+      <div class="grid grid-cols-2 gap-2.5 pt-1">
+        <button type="button" onclick="closeModal()" class="touch-btn rounded-xl bg-slate-800 border border-slate-700 text-slate-300 text-xs font-semibold">Anuluj</button>
+        <button type="button" id="modalConfirmBtn" class="touch-btn rounded-xl bg-rose-600 text-white text-xs font-bold">Potwierdź</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== APPLICATION LOGIC ==================== -->
+  <script>
+    const FULL_USDC_PAIRS = [
+      "BTC-USD_UM_XPERP-310404","ETH-USD_UM_XPERP-310404","SOL-USD_UM_XPERP-310404","XRP-USD_UM_XPERP-310404","DOGE-USD_UM_XPERP-310404",
+      "PEPE-USD_UM_XPERP-310404","SUI-USD_UM_XPERP-310404","AVAX-USD_UM_XPERP-310404","LINK-USD_UM_XPERP-310404","NEAR-USD_UM_XPERP-310404",
+      "HYPE-USD_UM_XPERP-310404","TAO-USD_UM_XPERP-310404","APT-USD_UM_XPERP-310404","ARB-USD_UM_XPERP-310404","OP-USD_UM_XPERP-310404",
+      "INJ-USD_UM_XPERP-310404","TIA-USD_UM_XPERP-310404","SEI-USD_UM_XPERP-310404","RENDER-USD_UM_XPERP-310404","FET-USD_UM_XPERP-310404",
+      "WIF-USD_UM_XPERP-310404","BONK-USD_UM_XPERP-310404","FLOKI-USD_UM_XPERP-310404","SHIB-USD_UM_XPERP-310404","ADA-USD_UM_XPERP-310404",
+      "DOT-USD_UM_XPERP-310404","ATOM-USD_UM_XPERP-310404","UNI-USD_UM_XPERP-310404","AAVE-USD_UM_XPERP-310404","LTC-USD_UM_XPERP-310404",
+      "BCH-USD_UM_XPERP-310404","ETC-USD_UM_XPERP-310404","FIL-USD_UM_XPERP-310404","ICP-USD_UM_XPERP-310404","IMX-USD_UM_XPERP-310404",
+      "STX-USD_UM_XPERP-310404","JUP-USD_UM_XPERP-310404","PYTH-USD_UM_XPERP-310404","WLD-USD_UM_XPERP-310404","ORDI-USD_UM_XPERP-310404",
+      "GALA-USD_UM_XPERP-310404","SAND-USD_UM_XPERP-310404","MANA-USD_UM_XPERP-310404","RUNE-USD_UM_XPERP-310404","ENA-USD_UM_XPERP-310404",
+      "ONDO-USD_UM_XPERP-310404","PENDLE-USD_UM_XPERP-310404","TON-USD_UM_XPERP-310404","OKB-USD_UM_XPERP-310404"
+    ];
+
+    const NON_CRYPTO_BASE = new Set([
+      "AAPL","GOOGL","GOOG","MSFT","AMZN","NVDA","TSLA","META","NFLX","AMD","INTC","QCOM","AVGO","ORCL","CRM","ADBE",
+      "PYPL","SQ","SHOP","UBER","ABNB","COIN","MSTR","HOOD","PLTR","SNOW","ARM","SMCI","MU","TSM","ASML","BABA","JD",
+      "NIO","XPEV","LI","DIS","NKE","MCD","SBUX","KO","PEP","WMT","COST","TGT","HD","JPM","BAC","GS","MS","V","MA",
+      "BRK","XOM","CVX","BA","CAT","GE","F","GM","RIVN","LCID","GME","AMC","RDDT","SNAP","SPOT","ROKU","ZM","DOCU",
+      "ANTHROPIC","OPENAI","SPACEX","STRIPE","DATABRICKS","BYTEDANCE","XAI","PERPLEXITY","SCALEAI",
+      "SPX","SPX500","NDX","NAS100","US100","US500","US30","DJI","DAX","GER40","UK100","FTSE","NIKKEI","JP225","HSI",
+      "XAU","XAG","GOLD","SILVER","OIL","WTI","BRENT","NATGAS","COPPER","PLATINUM","PALLADIUM",
+      "EUR","GBP","JPY","CHF","AUD","CAD","NZD","CNH","TRY","PLN","MXN","ZAR"
+    ]);
+
+    function isCryptoSymbolPair(instId) {
+      const s = String(instId || "").trim().toUpperCase();
+      if (!s.includes("_UM_XPERP")) return false;
+      const base = s.split("-")[0];
+      return Boolean(base) && !NON_CRYPTO_BASE.has(base);
+    }
+
+    let state = null;
+    let workerUrl = localStorage.getItem("okx_worker_url") || "";
+    let workerPin = localStorage.getItem("okx_worker_pin") || "";
+    let cachedOkxUsdcSwaps = [];
+    let historyPeriod = "1D";
+
+    document.getElementById("workerUrlInput").value = workerUrl;
+    document.getElementById("workerPinInput").value = workerPin;
+
+    function setHistoryPeriod(period) {
+      historyPeriod = period;
+      ["1D", "7D", "MONTH", "ALL"].forEach(p => {
+        const btn = document.getElementById("histFilter-" + p);
+        if (!btn) return;
+        if (p === period) {
+          btn.className = "py-2 rounded-xl text-xs font-bold bg-blue-600 text-white transition";
+        } else {
+          btn.className = "py-2 rounded-xl text-xs font-semibold text-slate-400 transition";
+        }
+      });
+      renderAll();
+    }
+
+    function normalizeSinglePair(s) {
+      const clean = String(s || "").trim().toUpperCase();
+      if (!clean) return "";
+      if (clean.includes("_UM_XPERP")) return clean;
+      const m = clean.match(/^([A-Z0-9]+)-USD(C|T)?-SWAP$/);
+      if (m) return `${m[1]}-USD_UM_XPERP-310404`;
+      return clean;
+    }
+
+    function parsePairsText(raw) {
+      const cryptoOnly = document.getElementById("setCryptoOnly")?.checked ?? true;
+      return Array.from(new Set(
+        String(raw || "")
+          .split(/[\s,;]+/)
+          .map(normalizeSinglePair)
+          .filter(id => Boolean(id) && (!cryptoOnly || isCryptoSymbolPair(id)))
+      ));
+    }
+
+    function updatePairsCount() {
+      const list = parsePairsText(document.getElementById("setPairs").value);
+      document.getElementById("pairsCountBadge").textContent = `${list.length} krypto`;
+    }
+
+    function updateCfPlanBadge() {
+      const plan = document.getElementById("setCfPlan").value;
+      const limitVal = Number(document.getElementById("setMaxPairsBatch").value) || 16;
+      const badge = document.getElementById("cfPlanBadge");
+      if (plan === "FREE") {
+        badge.textContent = `FREE (${limitVal})`;
+        badge.className = "px-2.5 py-0.5 rounded-lg bg-amber-500/20 text-amber-300 text-[11px] font-mono font-bold";
+      } else if (plan === "CUSTOM") {
+        badge.textContent = `MAX (${limitVal})`;
+        badge.className = "px-2.5 py-0.5 rounded-lg bg-blue-500/20 text-blue-300 text-[11px] font-mono font-bold";
+      } else {
+        badge.textContent = `PAID (${limitVal})`;
+        badge.className = "px-2.5 py-0.5 rounded-lg bg-emerald-500/20 text-emerald-300 text-[11px] font-mono font-bold";
+      }
+    }
+
+    function onCfPlanChange() {
+      const plan = document.getElementById("setCfPlan").value;
+      const batchInput = document.getElementById("setMaxPairsBatch");
+      if (plan === "FREE") batchInput.value = 10;
+      else if (plan === "PAID") batchInput.value = 16;
+      else batchInput.value = 30;
+      updateCfPlanBadge();
+    }
+
+    function applyScanLimitPreset(limit, plan) {
+      document.getElementById("setCfPlan").value = plan;
+      document.getElementById("setMaxPairsBatch").value = limit;
+      updateCfPlanBadge();
+      showToast(`Ustawiono limit radaru: ${limit} par — kliknij Zapisz na dole`, "info");
+    }
+
+    function fillDefaultUsdcPairs() {
+      document.getElementById("setPairs").value = FULL_USDC_PAIRS.join(", ");
+      updatePairsCount();
+      renderDiscoveredChips();
+      showToast("Wstawiono 50 czystych kryptowalut — kliknij Zapisz na dole", "info");
+    }
+
+    async function runAiCryptoScreener() {
+      const btn = document.getElementById("btnAiFilterCrypto");
+      const origHtml = btn.innerHTML;
+      btn.disabled = true;
+      btn.innerHTML = `<span class="animate-pulse">🧠 Gemini przesiewa wszystkie pary OKX...</span>`;
+
+      try {
+        const data = await apiCall("/filter-crypto-pairs", "POST");
+        if (data) {
+          state = data;
+          const cleanList = Array.isArray(data.settings?.pairs) ? data.settings.pairs : FULL_USDC_PAIRS;
+          document.getElementById("setPairs").value = cleanList.join(", ");
+          updatePairsCount();
+          renderDiscoveredChips();
+          renderAll();
+          showToast(`Gotowe! AI zostawiło ${cleanList.length} kryptowalut i usunęło akcje/indeksy!`, "success");
+        }
+      } catch (e) {
+        showToast("Błąd podczas przesiewania par przez AI", "error");
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = origHtml;
+      }
+    }
+
+    async function discoverNewOkxPairs() {
+      const btn = document.getElementById("btnDiscoverPairs");
+      const origHtml = btn.innerHTML;
+      btn.disabled = true;
+      btn.innerHTML = `<span class="animate-pulse">Pobieram pary krypto *_UM_XPERP-*...</span>`;
+
+      try {
+        let instruments = [];
+        try {
+          const directRes = await fetch("https://eea.okx.com/api/v5/public/instruments?instType=FUTURES");
+          if (directRes.ok) {
+            const directJson = await directRes.json();
+            if (directJson && directJson.code === "0" && Array.isArray(directJson.data)) {
+              instruments = directJson.data;
+            }
+          }
+        } catch (directErr) {
+          if (workerUrl) {
+            const proxyData = await apiCall("/okx-instruments");
+            if (proxyData && Array.isArray(proxyData.data)) {
+              instruments = proxyData.data;
+            } else if (Array.isArray(proxyData)) {
+              instruments = proxyData;
+            }
+          } else {
+            throw directErr;
+          }
+        }
+
+        const cryptoOnly = document.getElementById("setCryptoOnly")?.checked ?? true;
+        const foundXperps = Array.from(new Set(
+          instruments
+            .filter(item => {
+              const id = String(item?.instId || "").toUpperCase();
+              const isLive = !item?.state || item.state === "live";
+              return id.includes("_UM_XPERP") && isLive && (!cryptoOnly || isCryptoSymbolPair(id));
+            })
+            .map(item => String(item.instId).toUpperCase())
+        )).sort();
+
+        if (foundXperps.length === 0) {
+          showToast("Nie pobrano kontraktów krypto *_UM_XPERP-* z OKX EU", "error");
+          return;
+        }
+
+        cachedOkxUsdcSwaps = foundXperps;
+        const missingCount = renderDiscoveredChips();
+        if (missingCount > 0) {
+          showToast(`Znaleziono ${missingCount} nowych par krypto *_UM_XPERP-*!`, "success");
+        } else {
+          showToast(`Masz już wszystkie ${foundXperps.length} par krypto na liście!`, "info");
+        }
+      } catch (e) {
+        showToast("Błąd pobierania listy par z OKX EU", "error");
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = origHtml;
+      }
+    }
+
+    function renderDiscoveredChips() {
+      const box = document.getElementById("discoveredPairsBox");
+      const chipsContainer = document.getElementById("discoveredPairsChips");
+      const titleEl = document.getElementById("discoveredPairsTitle");
+
+      if (!cachedOkxUsdcSwaps || cachedOkxUsdcSwaps.length === 0) {
+        box.classList.add("hidden");
+        return 0;
+      }
+
+      const currentSet = new Set(parsePairsText(document.getElementById("setPairs").value));
+      const missing = cachedOkxUsdcSwaps.filter(sym => !currentSet.has(sym) && isCryptoSymbolPair(sym));
+
+      if (missing.length === 0) {
+        box.classList.add("hidden");
+        chipsContainer.innerHTML = "";
+        return 0;
+      }
+
+      titleEl.textContent = `Dostępne krypto na OKX EU spoza listy (${missing.length}):`;
+      chipsContainer.innerHTML = missing.map(sym => `
+        <button type="button" onclick="addSingleDiscoveredPair('${sym}')" class="px-2.5 py-1.5 rounded-xl bg-slate-900 hover:bg-blue-600/20 border border-slate-700 hover:border-blue-500/50 text-slate-200 hover:text-blue-200 font-mono text-[11px] font-semibold transition active:scale-95">
+          + ${sym}
+        </button>
+      `).join("");
+
+      box.classList.remove("hidden");
+      return missing.length;
+    }
+
+    function addSingleDiscoveredPair(sym) {
+      const textarea = document.getElementById("setPairs");
+      const currentList = parsePairsText(textarea.value);
+      if (!currentList.includes(sym)) {
+        currentList.push(sym);
+        textarea.value = currentList.join(", ");
+      }
+      updatePairsCount();
+      renderDiscoveredChips();
+      showToast(`Dodano ${sym} — kliknij „Zapisz ustawienia w chmurze”`, "info");
+    }
+
+    function addAllDiscoveredPairs() {
+      const textarea = document.getElementById("setPairs");
+      const currentList = parsePairsText(textarea.value);
+      const currentSet = new Set(currentList);
+      let addedCount = 0;
+
+      for (const sym of cachedOkxUsdcSwaps) {
+        if (!currentSet.has(sym) && isCryptoSymbolPair(sym)) {
+          currentList.push(sym);
+          currentSet.add(sym);
+          addedCount++;
+        }
+      }
+
+      if (addedCount > 0) {
+        textarea.value = currentList.join(", ");
+        updatePairsCount();
+        renderDiscoveredChips();
+        showToast(`Dodano ${addedCount} par krypto — zapisz ustawienia w chmurze`, "success");
+      }
+    }
+
+    function showToast(msg, type = "info") {
+      const box = document.getElementById("toastBox");
+      const item = document.createElement("div");
+      const styles = {
+        success: "bg-emerald-950/95 border-emerald-500/50 text-emerald-200",
+        error: "bg-rose-950/95 border-rose-500/50 text-rose-200",
+        info: "bg-slate-900/95 border-blue-500/50 text-blue-200"
+      };
+      item.className = `pointer-events-auto border rounded-2xl px-3.5 py-2.5 text-xs font-semibold shadow-xl backdrop-blur-md transition-opacity duration-300 ${styles[type] || styles.info}`;
+      item.textContent = msg;
+      box.appendChild(item);
+      setTimeout(() => {
+        item.style.opacity = "0";
+        setTimeout(() => item.remove(), 300);
+      }, 3000);
+    }
+
+    function askConfirm(title, text, confirmLabel, onYes) {
+      document.getElementById("modalTitle").textContent = title;
+      document.getElementById("modalText").textContent = text;
+      const btn = document.getElementById("modalConfirmBtn");
+      btn.textContent = confirmLabel;
+      btn.onclick = () => {
+        closeModal();
+        onYes();
+      };
+      document.getElementById("confirmModal").classList.remove("hidden");
+    }
+
+    function closeModal() {
+      document.getElementById("confirmModal").classList.add("hidden");
+    }
+
+    function switchTab(tab) {
+      ["positions", "history", "settings", "cloud"].forEach(t => {
+        document.getElementById("tab-" + t).classList.toggle("hidden", t !== tab);
+        const nav = document.getElementById("nav-" + t);
+        nav.classList.toggle("text-blue-400", t === tab);
+        nav.classList.toggle("font-bold", t === tab);
+        nav.classList.toggle("text-slate-400", t !== tab);
+      });
+    }
+
+    async function apiCall(path, method = "GET", body = null) {
+      if (!workerUrl) {
+        showToast("Najpierw wpisz URL Workera i DASHBOARD_PIN w zakładce System", "info");
+        switchTab("cloud");
+        return null;
+      }
+      const cleanUrl = workerUrl.replace(/\/+$/, "") + path;
+      const res = await fetch(cleanUrl, {
+        method,
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": "Bearer " + workerPin
+        },
+        body: body ? JSON.stringify(body) : null
+      });
+      if (res.status === 401) {
+        showToast("Nieprawidłowy DASHBOARD_PIN! Sprawdź hasło w zakładce System.", "error");
+        switchTab("cloud");
+        return null;
+      }
+      if (!res.ok) {
+        throw new Error(`HTTP ${res.status}`);
+      }
+      return await res.json();
+    }
+
+    async function connectCloud() {
+      workerUrl = document.getElementById("workerUrlInput").value.trim().replace(/\/+$/, "");
+      workerPin = document.getElementById("workerPinInput").value.trim();
+      if (!workerUrl || !workerPin) {
+        showToast("Wpisz adres URL Workera oraz DASHBOARD_PIN", "error");
+        return;
+      }
+      localStorage.setItem("okx_worker_url", workerUrl);
+      localStorage.setItem("okx_worker_pin", workerPin);
+
+      const btn = document.getElementById("btnConnectCloud");
+      btn.textContent = "Łączenie...";
+      const ok = await fetchState(true);
+      btn.textContent = "Połącz i zsynchronizuj z chmurą";
+      if (ok) switchTab("positions");
+    }
+
+    async function fetchState(notify = false) {
+      try {
+        const data = await apiCall("/state");
+        if (!data || data.error) return false;
+        state = data;
+        renderAll();
+        if (notify) showToast("Zsynchronizowano z chmurą v9.1", "success");
+        return true;
+      } catch (e) {
+        document.getElementById("headerSub").textContent = "Błąd połączenia z chmurą";
+        if (notify) showToast("Błąd połączenia z Workerem: " + e.message, "error");
+        return false;
+      }
+    }
+
+    async function refreshDashboardPositions() {
+      if (state && state.mode === "OKX_API") {
+        await syncOkxNow();
+      } else {
+        await fetchState(true);
+      }
+    }
+
+    async function triggerRunNow() {
+      if (!workerUrl) {
+        showToast("Najpierw połącz aplikację z Workerem w zakładce System", "info");
+        switchTab("cloud");
+        return;
+      }
+      const btn = document.getElementById("btnScanNow");
+      btn.textContent = "Skanuję...";
+      btn.disabled = true;
+      try {
+        const data = await apiCall("/run-now", "POST");
+        if (data) {
+          state = data;
+          renderAll();
+          showToast("Analiza AI-First zakończona", "success");
+        }
+      } catch (e) {
+        showToast("Błąd skanowania rynku: " + e.message, "error");
+      } finally {
+        btn.disabled = false;
+        btn.textContent = "Skanuj";
+      }
+    }
+
+    async function triggerManualAiReview() {
+      const btn = document.getElementById("btnManualAiReview");
+      const orig = btn.textContent;
+      btn.disabled = true;
+      btn.textContent = "Analizuję...";
+      try {
+        const data = await apiCall("/review-history", "POST");
+        if (data) {
+          state = data;
+          renderAll();
+          showToast("Zaktualizowano wnioski ogólne i profile monet!", "success");
+        }
+      } catch (e) {
+        showToast("Błąd uruchamiania audytu AI", "error");
+      } finally {
+        btn.disabled = false;
+        btn.textContent = orig;
+      }
+    }
+
+    async function runDiagnosticProxies() {
+      const btn = document.getElementById("btnTestProxies");
+      const orig = btn.textContent;
+      btn.disabled = true;
+      btn.textContent = "Sprawdzam wszystkie bramki Proxy GAS...";
+      try {
+        const data = await apiCall("/test-proxies", "POST");
+        if (data) {
+          state = data;
+          renderAll();
+          const okCount = data.proxyHealthSummary?.okCount ?? 0;
+          const totalCount = data.proxyHealthSummary?.totalCount ?? 0;
+          showToast(`Test Proxy GAS zakończony: ${okCount}/${totalCount} sprawnych!`, okCount > 0 ? "success" : "error");
+        }
+      } catch (e) {
+        showToast("Błąd podczas testowania bramek Proxy GAS", "error");
+      } finally {
+        btn.disabled = false;
+        btn.textContent = orig;
+      }
+    }
+
+    async function runDiagnosticTestOrder() {
+      const btn = document.getElementById("btnTestOrder");
+      const orig = btn.textContent;
+      btn.disabled = true;
+      btn.textContent = "Wysyłam testowe zlecenie *_UM_XPERP-*...";
+      try {
+        const data = await apiCall("/test-order", "POST");
+        if (data) {
+          state = data;
+          renderAll();
+          switchTab("history");
+          showToast("Wynik testu zapisany w Dzienniku!", "info");
+        }
+      } catch (e) {
+        showToast("Błąd połączenia podczas testu zlecenia", "error");
+      } finally {
+        btn.disabled = false;
+        btn.textContent = orig;
+      }
+    }
+
+    async function runDiagnosticAiScan() {
+      const btn = document.getElementById("btnTestAiScan");
+      const orig = btn.textContent;
+      btn.disabled = true;
+      btn.textContent = "Skanuję losową parę krypto i pytam AI...";
+      try {
+        const data = await apiCall("/test-ai-scan", "POST");
+        if (data) {
+          state = data;
+          renderAll();
+          switchTab("history");
+          showToast("Dodano wpis testowy AI w Dzienniku!", "success");
+        }
+      } catch (e) {
+        showToast("Błąd połączenia podczas testu skanu AI", "error");
+      } finally {
+        btn.disabled = false;
+        btn.textContent = orig;
+      }
+    }
+
+    async function clearAiCooldowns() {
+      try {
+        const data = await apiCall("/update", "POST", { clearAiCooldown: true });
+        if (data) {
+          state = data;
+          renderAll();
+          showToast("Wyczyszczono pauzy odrzuceń AI i blokad", "success");
+        }
+      } catch (e) {
+        showToast("Nie udało się wyczyścić pauz", "error");
+      }
+    }
+
+    function clearHistoryAndLogsConfirm() {
+      askConfirm(
+        "Wyczyścić historię i logi AI?",
+        "Historia zamkniętych transakcji, logi AI oraz dotychczasowe wnioski z audytu zostaną wyczyszczone. Saldo i otwarte pozycje pozostaną bez zmian.",
+        "Wyczyść wszystko",
+        async () => {
+          const data = await apiCall("/update", "POST", { clearHistoryAndLogs: true });
+          if (data) {
+            state = data;
+            renderAll();
+            showToast("Wyczyszczono historię, logi i pamięć audytu AI", "success");
+          }
+        }
+      );
+    }
+
+    async function toggleRunning() {
+      if (!workerUrl) {
+        showToast("Najpierw połącz aplikację z Workerem w zakładce System", "info");
+        switchTab("cloud");
+        return;
+      }
+      if (!state) {
+        await fetchState(false);
+        if (!state) return;
+      }
+      try {
+        const data = await apiCall("/update", "POST", { isRunning: !state.isRunning });
+        if (data) {
+          state = data;
+          renderAll();
+          showToast(state.isRunning ? "Bot uruchomiony (24/7)" : "Bot wstrzymany (PAUZA)", "info");
+        }
+      } catch (e) {
+        showToast("Nie udało się zmienić statusu", "error");
+      }
+    }
+
+    async function syncOkxNow() {
+      try {
+        const data = await apiCall("/update", "POST", { syncBalanceNow: true });
+        if (data) {
+          state = data;
+          renderAll();
+          showToast("Zsynchronizowano saldo i pozycje z giełdą OKX!", "success");
+        }
+      } catch (e) {
+        showToast("Błąd synchronizacji z OKX", "error");
+      }
+    }
+
+    function setAccountMode(mode, isSim) {
+      if (mode === "OKX_API" && !isSim) {
+        askConfirm(
+          "Przełączyć na OKX REAL (USDC)?",
+          "Bot zacznie otwierać prawdziwe kontrakty krypto *_UM_XPERP-* rozliczane w USDC na Twoim rachunku OKX.",
+          "Tak, włącz OKX REAL",
+          () => applyAccountMode(mode, isSim)
+        );
+      } else {
+        applyAccountMode(mode, isSim);
+      }
+    }
+
+    async function applyAccountMode(mode, isSim) {
+      try {
+        const data = await apiCall("/update", "POST", {
+          mode,
+          okxSimulatedHeader: isSim,
+          syncBalanceNow: mode === "OKX_API"
+        });
+        if (data) {
+          state = data;
+          renderAll();
+          showToast("Zmieniono tryb rachunku", "success");
+        }
+      } catch (e) {
+        showToast("Błąd zmiany trybu rachunku", "error");
+      }
+    }
+
+    function resetDemoBalance() {
+      askConfirm(
+        "Resetować saldo DEMO?",
+        "Wirtualny portfel DEMO zostanie zresetowany do 1000.00 USDC, a otwarte pozycje i historia zostaną wyczyszczone.",
+        "Resetuj 1000 USDC",
+        async () => {
+          const data = await apiCall("/update", "POST", { resetDemo: true });
+          if (data) {
+            state = data;
+            renderAll();
+            showToast("Zresetowano saldo DEMO do 1000 USDC", "success");
+          }
+        }
+      );
+    }
+
+    function closePosNow(id, instId) {
+      askConfirm(
+        `Zamknąć ${instId}?`,
+        "Pozycja zostanie natychmiast zamknięta po aktualnej cenie rynkowej.",
+        "Zamknij teraz",
+        async () => {
+          const data = await apiCall("/update", "POST", { closePositionId: id });
+          if (data) {
+            state = data;
+            renderAll();
+            showToast(`Zamknięto pozycję ${instId}`, "info");
+          }
+        }
+      );
+    }
+
+    async function saveSettings() {
+      const btn = document.getElementById("btnSaveSettings");
+      btn.textContent = "Zapisywanie...";
+      const cryptoOnly = document.getElementById("setCryptoOnly").checked;
+      const parsedPairs = parsePairsText(document.getElementById("setPairs").value);
+      const cfPlan = document.getElementById("setCfPlan").value || "PAID";
+      const maxPairsBatch = Math.min(10000, Math.max(4, Number(document.getElementById("setMaxPairsBatch").value) || 16));
+      const maxSubrequests = cfPlan === "FREE" ? 50 : (cfPlan === "CUSTOM" ? 10000 : 1000);
+      const rejectCooldownMin = Math.min(240, Math.max(1, Number(document.getElementById("setAiRejectCooldownMin").value) || 25));
+
+      const settings = {
+        marginPerTrade: Number(document.getElementById("setMargin").value) || 10,
+        maxAllocatedBudget: Number(document.getElementById("setMaxBudget").value) || 0,
+        leverage: Number(document.getElementById("setLeverage").value) || 5,
+        maxAutoLeverage: Number(document.getElementById("setMaxAutoLev").value) || 10,
+        maxPositions: Number(document.getElementById("setMaxPos").value) || 3,
+        maxSpreadPct: Number(document.getElementById("setMaxSpread").value) || 0.25,
+        minQuality: Number(document.getElementById("setMinQual").value) || 70,
+        directionMode: document.getElementById("setDir").value,
+        cryptoOnlyFilter: cryptoOnly,
+        cloudflarePlan: cfPlan,
+        maxPairsPerCycle: maxPairsBatch,
+        maxSubrequests: maxSubrequests,
+        pairs: parsedPairs.length > 0 ? parsedPairs : FULL_USDC_PAIRS,
+        aiEnabled: document.getElementById("setAiEnabled").checked,
+        aiStrictness: document.getElementById("setAiStrictness").value || "MEDIUM",
+        geminiModel: document.getElementById("setGeminiModel").value,
+        geminiThinkingLevel: document.getElementById("setThinkingLevel").value,
+        aiPosIntervalSec: Number(document.getElementById("setAiInterval").value) || 1800,
+        aiRejectCooldownSec: rejectCooldownMin * 60
+      };
+      try {
+        const data = await apiCall("/update", "POST", { settings });
+        if (data) {
+          state = data;
+          renderAll();
+          showToast(`Zapisano ${settings.pairs.length} par krypto w chmurze!`, "success");
+        }
+      } catch (e) {
+        showToast("Błąd zapisu ustawień", "error");
+      } finally {
+        btn.textContent = "Zapisz ustawienia w chmurze";
+      }
+    }
+
+    function renderLogCard(l) {
+      const isErr = String(l.tag).includes("Blad") || String(l.tag).includes("Błąd") || String(l.tag).includes("Odrzuc") || String(l.tag).includes("Pominął") || String(l.tag).includes("Timeout");
+      const tagColor = isErr ? "text-rose-400" : "text-blue-400";
+      return `
+        <div class="glass-card rounded-2xl p-3 text-xs">
+          <div class="flex items-center justify-between text-[10px] ${tagColor} font-bold mb-1">
+            <span>${l.tag}</span>
+            <span class="font-mono text-slate-500">${new Date(l.ts).toLocaleTimeString("pl-PL")}</span>
+          </div>
+          <p class="text-slate-200 leading-relaxed">${l.text}</p>
+        </div>`;
+    }
+
+    function setFieldSafe(id, value) {
+      const el = document.getElementById(id);
+      if (el && document.activeElement !== el) {
+        el.value = value;
+      }
+    }
+
+    function renderAll() {
+      if (!state) return;
+
+      document.getElementById("statusDot").className = state.isRunning
+        ? "w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse shrink-0"
+        : "w-2.5 h-2.5 rounded-full bg-rose-500 shrink-0";
+      document.getElementById("btnToggleRun").textContent = state.isRunning ? "PAUZA" : "START";
+      document.getElementById("btnToggleRun").className = state.isRunning
+        ? "touch-btn px-3.5 py-2 rounded-xl bg-rose-600/85 text-white text-xs font-extrabold"
+        : "touch-btn px-3.5 py-2 rounded-xl bg-emerald-600 text-white text-xs font-extrabold shadow-lg shadow-emerald-600/20";
+
+      const lastTime = state.lastRunAt ? new Date(state.lastRunAt).toLocaleTimeString("pl-PL") : "--:--";
+      document.getElementById("headerSub").textContent = `Ostatni cykl: ${lastTime} • ${state.settings?.geminiModel || "gemini-4-hydrogen"}`;
+
+      document.getElementById("balanceDisplay").innerHTML = `${Number(state.balance || 0).toFixed(2)} <span class="text-sm font-bold text-blue-400">USDC</span>`;
+      document.getElementById("feesDisplay").textContent = `Prowizje: ${Number(state.totalFeesPaid || 0).toFixed(2)} USDC`;
+      document.getElementById("scanSummaryBox").textContent = state.lastScanSummary || "Gotowy do pracy";
+
+      const badge = document.getElementById("modeBadge");
+      if (state.mode === "DEMO") {
+        badge.textContent = "DEMO CHMURA";
+        badge.className = "inline-block px-2.5 py-1 rounded-lg text-[10px] font-extrabold bg-slate-800 text-slate-300 border border-slate-700";
+      } else if (state.okxSimulatedHeader) {
+        badge.textContent = "OKX DEMO API";
+        badge.className = "inline-block px-2.5 py-1 rounded-lg text-[10px] font-extrabold bg-amber-500/20 text-amber-300 border border-amber-500/40";
+      } else {
+        badge.textContent = "OKX REAL";
+        badge.className = "inline-block px-2.5 py-1 rounded-lg text-[10px] font-extrabold bg-rose-600 text-white";
+      }
+
+      const liveRow = document.getElementById("okxLiveRow");
+      if (state.mode === "OKX_API") {
+        liveRow.classList.remove("hidden");
+        document.getElementById("okxAvailText").textContent = `${Number(state.okxAvailableUsdc || 0).toFixed(2)} USDC`;
+        document.getElementById("okxEquityText").textContent = `${Number(state.okxLiveEquity || state.balance || 0).toFixed(2)} USDC`;
+      } else {
+        liveRow.classList.add("hidden");
+      }
+
+      // KPI na Pulpicie
+      const openPos = state.openPositions || [];
+      const allHistory = state.history || [];
+      const totalUnrealized = openPos.reduce((acc, p) => acc + Number(p.unrealizedNetPnl || 0), 0);
+      const totalRealizedAll = allHistory.reduce((acc, h) => acc + Number(h.netPnl || 0), 0);
+      const totalWinsAll = allHistory.filter(h => Number(h.netPnl || 0) > 0).length;
+      const totalWrAll = allHistory.length > 0 ? Math.round((totalWinsAll / allHistory.length) * 100) : 0;
+
+      const kpiUnrEl = document.getElementById("kpiUnrealizedPnl");
+      kpiUnrEl.textContent = `${totalUnrealized >= 0 ? "+" : ""}${totalUnrealized.toFixed(3)} USDC`;
+      kpiUnrEl.className = `text-xs font-extrabold font-mono mt-0.5 block ${totalUnrealized > 0 ? "text-emerald-400" : totalUnrealized < 0 ? "text-rose-400" : "text-slate-200"}`;
+
+      const kpiRealEl = document.getElementById("kpiRealizedPnl");
+      kpiRealEl.textContent = `${totalRealizedAll >= 0 ? "+" : ""}${totalRealizedAll.toFixed(2)} USDC`;
+      kpiRealEl.className = `text-xs font-extrabold font-mono mt-0.5 block ${totalRealizedAll > 0 ? "text-emerald-400" : totalRealizedAll < 0 ? "text-rose-400" : "text-slate-200"}`;
+
+      document.getElementById("kpiWinRate").textContent = `${totalWrAll}% (${totalWinsAll}/${allHistory.length})`;
+
+      // Status sekretów i proxy
+      const gStat = document.getElementById("geminiKeyStatus");
+      gStat.textContent = state.secretsStatus?.hasGeminiKey ? "Aktywny" : "Brak w Secrets";
+      gStat.className = state.secretsStatus?.hasGeminiKey
+        ? "px-2.5 py-0.5 rounded-lg bg-emerald-500/20 text-emerald-300 font-bold"
+        : "px-2.5 py-0.5 rounded-lg bg-rose-500/20 text-rose-300 font-semibold";
+
+      const oStat = document.getElementById("okxKeyStatus");
+      oStat.textContent = state.secretsStatus?.hasOkxKeys ? "Aktywne" : "Brak w Secrets";
+      oStat.className = state.secretsStatus?.hasOkxKeys
+        ? "px-2.5 py-0.5 rounded-lg bg-emerald-500/20 text-emerald-300 font-bold"
+        : "px-2.5 py-0.5 rounded-lg bg-rose-500/20 text-rose-300 font-semibold";
+
+      const pStat = document.getElementById("proxyPoolStatus");
+      const pCount = Number(state.secretsStatus?.proxyCount || 0);
+      const pActive = Number(state.secretsStatus?.activeProxyIndex || 1);
+      if (pCount > 0) {
+        pStat.textContent = `Pula: ${pCount} szt. (akt. #${pActive})`;
+        pStat.className = "px-2.5 py-0.5 rounded-lg bg-emerald-500/20 text-emerald-300 font-bold font-mono";
+      } else {
+        pStat.textContent = "Brak zmiennych";
+        pStat.className = "px-2.5 py-0.5 rounded-lg bg-rose-500/20 text-rose-300 font-semibold";
+      }
+
+      const proxyHealthBox = document.getElementById("proxyHealthList");
+      const healthItems = state.proxyHealthSummary?.items || [];
+      if (healthItems.length > 0) {
+        proxyHealthBox.classList.remove("hidden");
+        proxyHealthBox.innerHTML = healthItems.map(item => `
+          <div class="flex items-center justify-between text-[11px] font-mono bg-slate-900/85 rounded-lg px-2.5 py-1.5 border ${item.ok ? "border-emerald-500/30" : "border-rose-500/40"}">
+            <span class="text-slate-200 truncate pr-2">${item.label}</span>
+            <span class="${item.ok ? "text-emerald-400 font-bold" : "text-rose-400 font-bold"} shrink-0">
+              ${item.ok ? "● " : "✕ "}${item.statusText}
+            </span>
+          </div>
+        `).join("");
+      } else {
+        proxyHealthBox.classList.add("hidden");
+      }
+
+      // Bezpieczne wypełnianie formularza ustawień
+      const s = state.settings || {};
+      setFieldSafe("setMargin", s.marginPerTrade ?? 10);
+      setFieldSafe("setMaxBudget", s.maxAllocatedBudget ?? 0);
+      setFieldSafe("setLeverage", s.leverage ?? 5);
+      setFieldSafe("setMaxAutoLev", s.maxAutoLeverage ?? 10);
+      setFieldSafe("setMaxPos", s.maxPositions ?? 3);
+      setFieldSafe("setMaxSpread", s.maxSpreadPct ?? 0.25);
+      setFieldSafe("setMinQual", s.minQuality ?? 70);
+      setFieldSafe("setDir", s.directionMode || "BOTH");
+      document.getElementById("setCryptoOnly").checked = s.cryptoOnlyFilter !== false;
+      setFieldSafe("setCfPlan", s.cloudflarePlan || "PAID");
+      setFieldSafe("setMaxPairsBatch", s.maxPairsPerCycle ?? 16);
+      updateCfPlanBadge();
+
+      document.getElementById("setAiEnabled").checked = Boolean(s.aiEnabled);
+      setFieldSafe("setAiStrictness", s.aiStrictness || "MEDIUM");
+      setFieldSafe("setGeminiModel", s.geminiModel || "gemini-4-hydrogen");
+      setFieldSafe("setThinkingLevel", s.geminiThinkingLevel || "low");
+      setFieldSafe("setAiInterval", s.aiPosIntervalSec ?? 1800);
+      setFieldSafe("setAiRejectCooldownMin", s.aiRejectCooldownSec ? Math.round(s.aiRejectCooldownSec / 60) : 25);
+
+      const pairsEl = document.getElementById("setPairs");
+      if (document.activeElement !== pairsEl) {
+        const list = Array.isArray(s.pairs) && s.pairs.length > 0 ? s.pairs : FULL_USDC_PAIRS;
+        pairsEl.value = list.map(normalizeSinglePair).join(", ");
+        updatePairsCount();
+        renderDiscoveredChips();
+      }
+
+      // Otwarte pozycje
+      const posBox = document.getElementById("openPositionsList");
+      document.getElementById("openCount").textContent = openPos.length;
+
+      if (openPos.length === 0) {
+        posBox.innerHTML = `<div class="glass-card rounded-3xl p-5 text-center text-xs text-slate-400">Brak otwartych pozycji USDC. Jeśli otworzyłeś pozycję na giełdzie, kliknij „Odśwież z OKX” powyżej.</div>`;
+      } else {
+        posBox.innerHTML = openPos.map(p => {
+          const pnl = Number(p.unrealizedNetPnl || 0);
+          const pnlColor = pnl >= 0 ? "text-emerald-400" : "text-rose-400";
+          const sideBadge = p.side === "LONG"
+            ? "bg-emerald-500/20 text-emerald-300 border border-emerald-500/30"
+            : "bg-rose-500/20 text-rose-300 border border-rose-500/30";
+          return `
+            <div class="glass-card rounded-3xl p-4 space-y-2.5">
+              <div class="flex items-center justify-between">
+                <div class="flex items-center gap-2">
+                  <span class="font-extrabold text-sm text-white">${p.instId}</span>
+                  <span class="px-2 py-0.5 rounded-md text-[10px] font-extrabold ${sideBadge}">${p.side} ${p.leverage}x</span>
+                </div>
+                <span class="font-extrabold font-mono text-sm ${pnlColor}">
+                  ${pnl >= 0 ? "+" : ""}${pnl.toFixed(3)} USDC
+                </span>
+              </div>
+              <div class="grid grid-cols-3 gap-1.5 text-[11px] font-mono text-slate-400 bg-slate-950/60 rounded-2xl p-2.5 border border-slate-800/80">
+                <div>Wejście: <span class="text-slate-200 block">${p.entryPrice}</span></div>
+                <div>Teraz: <span class="text-white font-bold block">${p.currentPrice}</span></div>
+                <div>Depozyt: <span class="text-slate-200 block">${p.margin} USDC</span></div>
+                <div>SL: <span class="text-rose-300 block">${Number(p.slPrice).toPrecision(5)}</span></div>
+                <div>TP: <span class="text-emerald-300 block">${Number(p.tpPrice).toPrecision(5)}</span></div>
+                <div>Vol: <span class="text-blue-300 block">${p.relVol5 || 1}x</span></div>
+              </div>
+              <div class="flex items-center justify-between pt-1 border-t border-slate-800/80">
+                <span class="text-[11px] text-slate-400">${p.fibPct}% Fibo • ${p.candlePattern}</span>
+                <button type="button" onclick="closePosNow('${p.id}', '${p.instId}')" class="px-3.5 py-1.5 rounded-xl bg-rose-500/15 border border-rose-500/30 text-rose-300 text-xs font-bold active:scale-95">
+                  Zamknij
+                </button>
+              </div>
+            </div>`;
+        }).join("");
+      }
+
+      // Logi AI
+      const aiLogs = state.aiLogs || [];
+      const dashPreviewBox = document.getElementById("dashboardLogsPreview");
+      const aiBox = document.getElementById("aiLogsList");
+
+      if (aiLogs.length === 0) {
+        const emptyHtml = `<div class="glass-card rounded-2xl p-4 text-center text-xs text-slate-500">Brak wpisów w dzienniku AI.</div>`;
+        dashPreviewBox.innerHTML = emptyHtml;
+        aiBox.innerHTML = emptyHtml;
+      } else {
+        dashPreviewBox.innerHTML = aiLogs.slice(0, 4).map(renderLogCard).join("");
+        aiBox.innerHTML = aiLogs.slice(0, 40).map(renderLogCard).join("");
+      }
+
+      // Historia filtrowana wg okresu
+      const nowMs = Date.now();
+      const startOfMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1).getTime();
+
+      const filteredHistory = allHistory.filter(h => {
+        const ts = Number(h.closedAt || 0);
+        if (historyPeriod === "1D") return (nowMs - ts) <= 24 * 3600 * 1000;
+        if (historyPeriod === "7D") return (nowMs - ts) <= 7 * 24 * 3600 * 1000;
+        if (historyPeriod === "MONTH") return ts >= startOfMonth;
+        return true;
+      });
+
+      const periodLabels = {
+        "1D": "Wynik: Ostatnie 24h",
+        "7D": "Wynik: Ostatni Tydzień (7 dni)",
+        "MONTH": `Wynik: Bieżący Miesiąc (${new Date().toLocaleString("pl-PL", { month: "long" })})`,
+        "ALL": "Wynik: Cała historia"
+      };
+      document.getElementById("histPeriodLabel").textContent = periodLabels[historyPeriod] || "Wynik";
+
+      const totalNet = filteredHistory.reduce((acc, h) => acc + Number(h.netPnl || 0), 0);
+      const currentEquity = Number(state.okxLiveEquity || state.balance || 0);
+      const startCapital = Math.max(1, currentEquity - totalNet);
+      const periodPnlPct = (totalNet / startCapital) * 100;
+
+      const netEl = document.getElementById("netPnlTotal");
+      netEl.innerHTML = `${totalNet >= 0 ? "+" : ""}${totalNet.toFixed(2)} USDC <span class="text-sm font-bold">(${periodPnlPct >= 0 ? "+" : ""}${periodPnlPct.toFixed(2)}%)</span>`;
+      netEl.className = `text-xl font-extrabold font-mono mt-0.5 ${totalNet >= 0 ? "text-emerald-400" : "text-rose-400"}`;
+
+      const winsCount = filteredHistory.filter(h => Number(h.netPnl || 0) > 0).length;
+      const winRate = filteredHistory.length > 0 ? Math.round((winsCount / filteredHistory.length) * 100) : 0;
+      document.getElementById("histWinRateBadge").textContent = `WR: ${winRate}% (${winsCount}/${filteredHistory.length})`;
+
+      const closedSinceAudit = Math.max(0, (Number(state.totalClosedCount) || allHistory.length) - (Number(state.lastAiReviewAtCount) || 0));
+      document.getElementById("aiAuditProgress").textContent = `Audyt AI: ${closedSinceAudit}/20 zamkn.`;
+      document.getElementById("aiLessonsBox").textContent = state.aiLessonsLearned || "Trwa zbieranie danych do pierwszej analizy 20 zamkniętych pozycji.";
+
+      const coinLessonsMap = state.aiCoinLessons || {};
+      const coinEntries = Object.entries(coinLessonsMap);
+      const coinListEl = document.getElementById("aiCoinLessonsList");
+      if (coinEntries.length === 0) {
+        coinListEl.innerHTML = `<div class="text-[11px] text-slate-500 bg-slate-900/60 rounded-xl px-2.5 py-2 border border-slate-800/80">Brak jeszcze indywidualnych profili monet — pojawią się po pierwszym audycie.</div>`;
+      } else {
+        coinListEl.innerHTML = coinEntries.map(([coin, rule]) => `
+          <div class="bg-slate-900/80 rounded-xl px-2.5 py-2 border border-slate-800 flex items-start gap-2">
+            <span class="px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-300 font-mono text-[10px] font-bold shrink-0 mt-0.5">${coin}</span>
+            <span class="text-[11px] text-slate-300 leading-snug">${rule}</span>
+          </div>
+        `).join("");
+      }
+
+      const histBox = document.getElementById("historyList");
+      if (filteredHistory.length === 0) {
+        histBox.innerHTML = `<div class="glass-card rounded-2xl p-5 text-center text-xs text-slate-400">Brak zamkniętych transakcji w wybranym okresie.</div>`;
+      } else {
+        histBox.innerHTML = filteredHistory.map(h => {
+          const net = Number(h.netPnl || 0);
+          const ok = net >= 0;
+          const marginVal = Math.max(0.01, Number(h.margin) || 10);
+          const tradePct = h.pnlPct !== undefined ? Number(h.pnlPct) : Number(((net / marginVal) * 100).toFixed(2));
+          return `
+            <div class="glass-card rounded-2xl p-3.5 space-y-1.5">
+              <div class="flex items-center justify-between">
+                <span class="font-bold text-xs text-white">${h.instId} (${h.side} ${h.leverage}x)</span>
+                <span class="font-extrabold font-mono text-xs ${ok ? "text-emerald-400" : "text-rose-400"}">
+                  ${ok ? "+" : ""}${net.toFixed(3)} USDC (${tradePct >= 0 ? "+" : ""}${tradePct.toFixed(1)}%)
+                </span>
+              </div>
+              <div class="text-[11px] text-slate-300">${h.reason}</div>
+              <div class="text-[10px] text-slate-500 flex justify-between font-mono">
+                <span>${h.setup}</span>
+                <span>${new Date(h.closedAt).toLocaleString("pl-PL")}</span>
+              </div>
+            </div>`;
+        }).join("");
+      }
+    }
+
+    if (workerUrl) {
+      fetchState(false);
+    } else {
+      switchTab("cloud");
+    }
+    setInterval(() => {
+      if (workerUrl) fetchState(false);
+    }, 25000);
+  </script>
+</body>
+</html>
